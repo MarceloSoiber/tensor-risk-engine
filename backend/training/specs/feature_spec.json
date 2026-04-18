@@ -1,0 +1,43 @@
+{
+  "target": {
+    "name": "is_fraud",
+    "positive_label": 1,
+    "negative_label": 0,
+    "type": "binary"
+  },
+  "entity_id": {
+    "columns": ["cc_num"],
+    "description": "Card account identifier used for grouping and history-based features"
+  },
+  "time_col": {
+    "name": "trans_date_trans_time",
+    "format": "%Y-%m-%d %H:%M:%S",
+    "timezone": "naive"
+  },
+  "id_columns": ["trans_num", "Unnamed: 0"],
+  "numeric_columns": ["amt", "lat", "long", "city_pop", "merch_lat", "merch_long", "unix_time"],
+  "categorical_columns": ["merchant", "category", "gender", "state", "job"],
+  "drop_columns": ["Unnamed: 0", "first", "last", "street", "city", "zip", "dob", "trans_num"],
+  "log1p_columns": ["amt", "city_pop"],
+  "high_cardinality_categorical": ["merchant", "job"],
+  "low_cardinality_categorical": ["category", "gender", "state"],
+  "split": {
+    "strategy": "time_based",
+    "train_ratio": 0.7,
+    "validation_ratio": 0.15,
+    "test_ratio": 0.15,
+    "shuffle": false,
+    "stratify_target": false,
+    "group_by_entity": true,
+    "random_seed": 42
+  },
+  "sequence": {
+    "enabled": true,
+    "sort_by": ["cc_num", "trans_date_trans_time"],
+    "window_size": 30,
+    "step_size": 1,
+    "min_history_size": 1,
+    "feature_columns": ["amt", "category", "merchant", "state", "job", "lat", "long", "merch_lat", "merch_long"],
+    "target_shift": 1
+  }
+}

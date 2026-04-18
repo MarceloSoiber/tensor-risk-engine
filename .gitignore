@@ -8,4 +8,10 @@ __pycache__/
 .pytest_cache/
 .DS_Store
 data/
-backend/training/data/*.csv
+logs/
+.agents/
+.vscode/
+.specify/
+AGENTS.md
+.codex
+tensor-risk-engine-roadmap.md
