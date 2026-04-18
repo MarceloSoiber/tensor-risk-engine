@@ -1,0 +1,14 @@
+{
+  "name": "btc-tensor-lab",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Orquestracao local via npm para frontend e backend em containers separados",
+  "scripts": {
+    "start": "docker compose up --build",
+    "start:detached": "docker compose up --build -d",
+    "stop": "docker compose down",
+    "restart": "docker compose down && docker compose up --build",
+    "logs": "docker compose logs -f",
+    "ps": "docker compose ps"
+  }
+}

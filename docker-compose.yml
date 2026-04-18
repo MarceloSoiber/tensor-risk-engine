@@ -1,0 +1,21 @@
+services:
+  backend:
+    build:
+      context: ./backend
+    container_name: btc-tensor-backend
+    environment:
+      APP_NAME: BTC Tensor Lab API
+      CORS_ORIGINS: "http://localhost:3000"
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/app:/app/app
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: btc-tensor-frontend
+    depends_on:
+      - backend
+    ports:
+      - "3000:80"
