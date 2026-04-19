@@ -1,76 +1,78 @@
-🚀 Tensor Risk Engine
+# Tensor Risk Engine
 
-Tensor Risk Engine is a behavioral fraud detection system that leverages sequence modeling and explainable AI to identify anomalous financial transactions.
+Tensor Risk Engine is a behavioral fraud detection platform that combines sequence modeling, feature engineering, and explainable AI to identify anomalous financial transactions.
 
-🧠 Overview
+The system models user transaction history as a temporal pattern and uses that context to estimate risk, surface decisions, and support model training workflows.
 
-Traditional fraud detection systems rely on static rules or simple classification models.
-This project introduces a sequence-based approach, where each user’s transaction history is modeled as a temporal pattern.
+## Stack
 
-By using deep learning and tensor representations, the system learns normal behavior and detects deviations in real time.
+- Backend: FastAPI on Python 3.14
+- Frontend: HTML, CSS, and JavaScript served by Nginx
+- Orchestration: Docker Compose
 
-## Stack Inicial
-
-- Backend: FastAPI (Python 3.12)
-- Frontend: HTML/CSS/JS servido por Nginx
-- Orquestração: Docker Compose
-
-## Estrutura
+## Project Layout
 
 ```text
-btc-tensor-lab/
+tensor-risk-engine/
 ├── backend/
 │   ├── app/
-│   │   ├── api/
-│   │   │   └── v1/routes/
+│   │   ├── controllers/
 │   │   ├── core/
-│   │   ├── models/
-│   │   ├── services/
-│   │   ├── schemas/
+│   │   ├── domain/
 │   │   ├── features/
-│   │   ├── inference/
-│   │   └── main.py
+│   │   ├── ml/
+│   │   ├── repositories/
+│   │   ├── schemas/
+│   │   └── services/
 │   ├── training/
-│   ├── notebooks/
 │   ├── Dockerfile
 │   └── requirements.txt
 ├── frontend/
 │   ├── public/
 │   ├── Dockerfile
 │   └── nginx.conf
-└── docker-compose.yml
+├── docker-compose.yml
+└── package.json
 ```
 
-## Como executar
+## Run Locally
 
-Na raiz do projeto:
+From the repository root:
 
 ```bash
 docker compose up --build
 ```
 
-Ou usando scripts npm:
+You can also use the npm shortcuts:
 
 ```bash
 npm start
 ```
 
-Scripts disponiveis:
+Available scripts:
 
-- `npm start`: sobe os containers com build
-- `npm run start:detached`: sobe em background
-- `npm run stop`: derruba os containers
-- `npm run restart`: reinicia com novo build
-- `npm run logs`: acompanha logs em tempo real
-- `npm run ps`: lista status dos servicos
+- `npm start`: starts both containers with a fresh build
+- `npm run start:detached`: starts the stack in the background
+- `npm run stop`: stops the stack
+- `npm run restart`: stops the stack and rebuilds it
+- `npm run logs`: streams container logs
+- `npm run ps`: shows the current container status
 
-## Endpoints e URLs
+## Endpoints
 
 - Frontend: http://localhost:3000
 - Backend root: http://localhost:8000
-- Healthcheck: http://localhost:8000/api/health
+- Health check: http://localhost:8000/api/health
+- API health: http://localhost:8000/api/v1/health
+- Prediction: `POST http://localhost:8000/api/v1/predict`
+- Training jobs:
+  - `POST /api/v1/training/jobs`
+  - `GET /api/v1/training/jobs`
+  - `GET /api/v1/training/jobs/{job_id}`
+  - `POST /api/v1/training/jobs/{job_id}/cancel`
 
-## Observações
+## Notes
 
-- O frontend usa proxy no Nginx para encaminhar `/api/*` para o container backend.
-- O backend já está com CORS configurado para `http://localhost:3000`.
+- The frontend proxies `/api/*` requests to the backend container through Nginx.
+- CORS is configured for `http://localhost:3000` by default.
+- Training job execution relies on the files under `backend/training/` and the paths configured in `backend/app/core/config.py`.
