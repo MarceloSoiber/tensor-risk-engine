@@ -44,7 +44,7 @@ def client() -> TestClient:
 
 @pytest.fixture()
 def patched_training_service(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TrainingJobService:
-    data_dir = Path("/home/soiber/Projetos/tensor-risk-engine/backend/training/data")
+    data_dir = Path(__file__).resolve().parents[1] / "training" / "data"
 
     def fake_popen(*args: Any, **kwargs: Any) -> FakeProcess:  # noqa: ARG001
         return FakeProcess()

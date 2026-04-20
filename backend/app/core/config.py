@@ -1,5 +1,6 @@
 import os
 from dataclasses import dataclass
+from pathlib import Path
 
 
 @dataclass(frozen=True)
@@ -31,6 +32,11 @@ def _parse_float_env(name: str, default: float) -> float:
     return max(0.0, min(1.0, value))
 
 
+BACKEND_ROOT = Path(__file__).resolve().parents[2]
+DEFAULT_TRAINING_DATA_ROOT = (BACKEND_ROOT / "training" / "data").resolve()
+DEFAULT_TRAINING_ARTIFACTS_ROOT = (BACKEND_ROOT / "training" / "artifacts").resolve()
+
+
 settings = Settings(
     app_name=os.getenv("APP_NAME", "BTC Tensor Lab API"),
     cors_origins=_parse_cors_origins(os.getenv("CORS_ORIGINS", "*")),
@@ -38,19 +44,19 @@ settings = Settings(
     risk_score_reject_min=_parse_float_env("RISK_SCORE_REJECT_MIN", 0.7),
     training_default_dataset_path=os.getenv(
         "TRAINING_DEFAULT_DATASET_PATH",
-        "/home/soiber/Projetos/tensor-risk-engine/backend/training/data/fraudTrain.csv",
+        str(DEFAULT_TRAINING_DATA_ROOT / "fraudTrain.csv"),
     ),
     training_data_root=os.getenv(
         "TRAINING_DATA_ROOT",
-        "/home/soiber/Projetos/tensor-risk-engine/backend/training/data",
+        str(DEFAULT_TRAINING_DATA_ROOT),
     ),
     training_artifacts_root=os.getenv(
         "TRAINING_ARTIFACTS_ROOT",
-        "/home/soiber/Projetos/tensor-risk-engine/backend/training/artifacts",
+        str(DEFAULT_TRAINING_ARTIFACTS_ROOT),
     ),
     training_jobs_registry_path=os.getenv(
         "TRAINING_JOBS_REGISTRY_PATH",
-        "/home/soiber/Projetos/tensor-risk-engine/backend/training/artifacts/jobs_registry.json",
+        str(DEFAULT_TRAINING_ARTIFACTS_ROOT / "jobs_registry.json"),
     ),
     training_python_bin=os.getenv("TRAINING_PYTHON_BIN", "python"),
 )
