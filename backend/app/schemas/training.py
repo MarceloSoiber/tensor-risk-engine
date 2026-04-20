@@ -57,7 +57,10 @@ class TrainingJobResponse(BaseModel):
     finished_at: datetime | None = None
     progress_epoch: int | None = None
     best_val_pr_auc: float | None = None
+    pid: int | None = None
+    return_code: int | None = None
     error: str | None = None
+    command: list[str] = Field(default_factory=list)
     dataset_metadata: DatasetMetadataResponse
 
 
@@ -65,4 +68,3 @@ class TrainingJobListResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     jobs: list[TrainingJobResponse]
-

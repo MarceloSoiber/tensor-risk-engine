@@ -65,7 +65,7 @@ def test_start_training_job_uses_default_dataset(
 ) -> None:
     response = client.post("/api/v1/training/jobs", json={"model_type": "baseline"})
     body = response.json()
-    print(body)
+    print(f"Body: {body}")
     
     assert response.status_code == 202
     assert body["status"] == "running"
