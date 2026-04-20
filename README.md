@@ -1,6 +1,6 @@
-# Tensor Risk Engine
+# Credit Card Fraud Detection
 
-Tensor Risk Engine is a behavioral fraud detection platform that combines sequence modeling, feature engineering, and explainable AI to identify anomalous financial transactions.
+Credit Card Fraud Detection is a behavioral fraud detection platform that combines sequence modeling, feature engineering, and explainable AI to identify anomalous financial transactions.
 
 The system models user transaction history as a temporal pattern and uses that context to estimate risk, surface decisions, and support model training workflows.
 
@@ -10,10 +10,16 @@ The system models user transaction history as a temporal pattern and uses that c
 - Frontend: HTML, CSS, and JavaScript served by Nginx
 - Orchestration: Docker Compose
 
+## Dataset
+
+The project uses the following reference dataset:
+
+- Kaggle: https://www.kaggle.com/datasets/kartik2112/fraud-detection?utm_source=chatgpt.com
+
 ## Project Layout
 
 ```text
-tensor-risk-engine/
+credit-card-fraud-detection/
 ├── backend/
 │   ├── app/
 │   │   ├── controllers/
