@@ -5,8 +5,6 @@
 :root {
   color-scheme: dark;
   --bg: #07111f;
-  --bg-soft: rgba(12, 24, 41, 0.84);
-  --panel: rgba(14, 26, 44, 0.88);
   --panel-border: rgba(255, 255, 255, 0.08);
   --text: #f3f7ff;
   --muted: #9db0ca;
@@ -21,6 +19,7 @@
 
 html,
 body {
+  width: 100%;
   min-height: 100%;
 }
 
@@ -45,12 +44,15 @@ a {
 
 .app-shell {
   min-height: 100vh;
-  padding: 32px;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 18px;
+  padding: 18px;
 }
 
 .app-header,
 .app-main {
-  width: min(1120px, 100%);
+  width: min(100%, 1600px);
   margin: 0 auto;
 }
 
@@ -59,7 +61,7 @@ a {
   align-items: start;
   justify-content: space-between;
   gap: 24px;
-  padding: 24px;
+  padding: 22px 24px;
   border: 1px solid var(--panel-border);
   border-radius: 28px;
   background: linear-gradient(180deg, rgba(17, 28, 48, 0.95), rgba(10, 18, 32, 0.92));
@@ -68,7 +70,7 @@ a {
 
 .brand__eyebrow,
 .panel__eyebrow,
-.hero__eyebrow {
+.dashboard-hero__eyebrow {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -79,8 +81,8 @@ a {
 }
 
 .brand__title,
-.hero__title,
-.panel__title {
+.panel__title,
+.dashboard-hero__title {
   margin: 0;
   line-height: 1.08;
 }
@@ -91,8 +93,8 @@ a {
 }
 
 .brand__tagline,
-.hero__description,
-.panel__description {
+.panel__description,
+.dashboard-hero__description {
   margin: 0;
   color: var(--muted);
 }
@@ -162,51 +164,318 @@ a {
 }
 
 .app-main {
-  padding: 28px 0 8px;
+  min-height: 0;
 }
 
-.page {
+.dashboard-screen {
+  min-height: calc(100vh - 160px);
   display: grid;
-  gap: 24px;
-}
-
-.page__actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
-.dashboard-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: auto auto 1fr;
   gap: 18px;
 }
 
-.hero,
+.dashboard-hero,
+.dashboard-sidebar,
+.dashboard-workspace,
+.dashboard-actions {
+  border: 1px solid var(--panel-border);
+  border-radius: 28px;
+  background: linear-gradient(180deg, rgba(15, 26, 44, 0.95), rgba(10, 17, 30, 0.95));
+  box-shadow: var(--shadow);
+}
+
+.dashboard-hero {
+  padding: 20px 24px;
+  display: grid;
+  gap: 8px;
+}
+
+.dashboard-hero__eyebrow {
+  letter-spacing: 0.18em;
+  font-size: 0.72rem;
+}
+
+.dashboard-hero__title {
+  font-size: clamp(1.5rem, 2vw, 2.2rem);
+}
+
+.dashboard-hero__description {
+  max-width: 110ch;
+  line-height: 1.6;
+}
+
+.dashboard-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 16px 20px;
+}
+
+.dashboard-layout {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 18px;
+  min-height: 0;
+}
+
+.dashboard-sidebar {
+  padding: 20px;
+  display: grid;
+  gap: 16px;
+  align-content: start;
+}
+
+.dashboard-sidebar__nav {
+  display: grid;
+  gap: 10px;
+}
+
+.dashboard-sidebar .button {
+  width: 100%;
+  justify-content: flex-start;
+}
+
+.dashboard-workspace {
+  padding: 18px;
+  display: grid;
+  gap: 18px;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  grid-template-rows: auto auto auto;
+  min-width: 0;
+  min-height: 0;
+}
+
+.dashboard-kpis {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.metric-card {
+  display: grid;
+  gap: 6px;
+  padding: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.metric-card__title {
+  color: var(--muted);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.metric-card__value {
+  font-size: clamp(1.35rem, 2vw, 2rem);
+}
+
+.metric-card__detail {
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.dashboard-chart {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 14px;
+}
+
+.dashboard-table {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
+.dashboard-alerts {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
+.dashboard-analyzer {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 14px;
+}
+
+.page--model-monitoring {
+  display: grid;
+  gap: 18px;
+}
+
+.monitoring-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  gap: 18px;
+  min-width: 0;
+}
+
+.monitoring-launcher,
+.monitoring-jobs {
+  display: grid;
+  gap: 14px;
+}
+
+.training-form {
+  display: grid;
+  gap: 14px;
+}
+
+.training-field-group {
+  display: grid;
+  gap: 10px;
+}
+
+.training-field__label {
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.74rem;
+}
+
+.training-option-group {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.training-option {
+  display: grid;
+  gap: 6px;
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  cursor: pointer;
+}
+
+.training-option input {
+  margin: 0;
+}
+
+.training-option span {
+  font-weight: 700;
+}
+
+.training-option small {
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.training-option.is-active {
+  border-color: rgba(103, 232, 249, 0.4);
+  background: rgba(103, 232, 249, 0.08);
+}
+
+.training-input {
+  display: grid;
+  gap: 10px;
+}
+
+.training-input__control {
+  width: 100%;
+  min-height: 48px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
+  padding: 0 14px;
+  outline: none;
+}
+
+.training-input__control::placeholder {
+  color: rgba(157, 176, 202, 0.72);
+}
+
+.training-input__control:focus {
+  border-color: rgba(103, 232, 249, 0.45);
+  box-shadow: 0 0 0 3px rgba(103, 232, 249, 0.12);
+}
+
+.monitoring-job-list {
+  display: grid;
+  gap: 12px;
+}
+
+.job-item {
+  display: grid;
+  gap: 6px;
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.job-item strong {
+  font-size: 0.98rem;
+}
+
+.job-item span {
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.chart-placeholder {
+  min-height: 320px;
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background:
+    linear-gradient(180deg, rgba(103, 232, 249, 0.08), transparent),
+    repeating-linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.03) 0,
+      rgba(255, 255, 255, 0.03) 1px,
+      transparent 1px,
+      transparent 10%
+    ),
+    repeating-linear-gradient(
+      0deg,
+      rgba(255, 255, 255, 0.03) 0,
+      rgba(255, 255, 255, 0.03) 1px,
+      transparent 1px,
+      transparent 18%
+    );
+}
+
+.data-table,
+.alert-list {
+  display: grid;
+  gap: 10px;
+}
+
+.data-table__row {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr 0.9fr 0.7fr;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--muted);
+}
+
+.data-table__row--head {
+  color: var(--text);
+  background: rgba(103, 232, 249, 0.08);
+  font-weight: 700;
+}
+
+.alert-item {
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--muted);
+  line-height: 1.5;
+}
+
 .panel {
   border: 1px solid var(--panel-border);
   border-radius: 24px;
   background: linear-gradient(180deg, rgba(15, 26, 44, 0.95), rgba(10, 17, 30, 0.95));
   box-shadow: var(--shadow);
-}
-
-.hero {
-  padding: 28px;
-}
-
-.hero__title {
-  margin-top: 12px;
-  font-size: clamp(2rem, 3vw, 3.2rem);
-  max-width: 14ch;
-}
-
-.hero__description {
-  margin-top: 14px;
-  max-width: 70ch;
-  line-height: 1.6;
-}
-
-.panel {
   padding: 22px;
 }
 
@@ -216,7 +485,7 @@ a {
 
 .panel__title {
   margin-top: 8px;
-  font-size: 1.15rem;
+  font-size: 1.05rem;
 }
 
 .panel__description {
@@ -283,26 +552,55 @@ a {
   font-size: 1.3rem;
 }
 
+@media (max-width: 1200px) {
+  .dashboard-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .monitoring-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 960px) {
   .app-header {
     flex-direction: column;
   }
 
-  .dashboard-grid {
+  .dashboard-layout {
     grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 640px) {
   .app-shell {
-    padding: 16px;
+    padding: 12px;
   }
 
-  .hero,
-  .panel,
-  .app-header {
+  .app-header,
+  .dashboard-hero,
+  .dashboard-sidebar,
+  .dashboard-workspace,
+  .dashboard-actions,
+  .panel {
     border-radius: 20px;
     padding-left: 18px;
     padding-right: 18px;
+  }
+
+  .dashboard-kpis {
+    grid-template-columns: 1fr;
+  }
+
+  .data-table__row {
+    grid-template-columns: 1fr;
+  }
+
+  .training-option-group {
+    grid-template-columns: 1fr;
   }
 }

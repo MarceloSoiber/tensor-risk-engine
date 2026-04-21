@@ -7,9 +7,9 @@
     "startAll": "docker compose -f docker-compose.backend.yml -f docker-compose.frontend.yml up --build",
     "startAll:detached": "docker compose -f docker-compose.backend.yml -f docker-compose.frontend.yml up --build -d",
     "startBack": "docker compose -f docker-compose.backend.yml up --build",
-    "startFront": "docker compose -f docker-compose.frontend.yml up --build",
+    "startFront":  "docker compose -f docker-compose.frontend.yml down && docker compose -f docker-compose.frontend.yml up --build",
     "stop": "docker compose -f docker-compose.backend.yml -f docker-compose.frontend.yml down",
-    "restart": "docker compose -f docker-compose.backend.yml -f docker-compose.frontend.yml down && docker compose -f docker-compose.backend.yml -f docker-compose.frontend.yml up --build",
+    "restartAll": "docker compose -f docker-compose.backend.yml -f docker-compose.frontend.yml down && docker compose -f docker-compose.backend.yml -f docker-compose.frontend.yml up --build",
     "logs": "docker compose -f docker-compose.backend.yml -f docker-compose.frontend.yml logs -f",
     "ps": "docker compose -f docker-compose.backend.yml -f docker-compose.frontend.yml ps"
   }
