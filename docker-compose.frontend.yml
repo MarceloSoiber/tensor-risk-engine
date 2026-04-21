@@ -1,0 +1,9 @@
+services:
+  frontend:
+    build:
+      context: ./frontend
+    container_name: credit-card-fraud-detection-frontend
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "3000:80"
