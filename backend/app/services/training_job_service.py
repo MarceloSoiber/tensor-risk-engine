@@ -136,6 +136,9 @@ class TrainingJobService:
         self._load_registry()
 
     def start_job(self, request: dict[str, Any]) -> dict[str, Any]:
+        
+        print(f"Received training job request: {request}")
+        
         model_type = request.get("model_type", "sequence")
         dataset_path = request.get("dataset_path")
         feature_spec_path = request.get("feature_spec_path")
@@ -156,7 +159,7 @@ class TrainingJobService:
             artifacts_dir = (self._artifacts_root / "jobs" / job_id).resolve()
             artifacts_dir.mkdir(parents=True, exist_ok=True)
             log_path = artifacts_dir / "train.log"
-
+            print(f"log_path: {log_path}")
             resolved_feature_spec_path = self._resolve_feature_spec_path(feature_spec_path)
 
             command = self._build_command(

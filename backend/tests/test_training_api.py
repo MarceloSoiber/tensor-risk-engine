@@ -59,20 +59,20 @@ def patched_training_service(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) ->
     return service
 
 
-# def test_start_training_job_uses_default_dataset(
-#     client: TestClient,
-#     patched_training_service: TrainingJobService,
-# ) -> None:
-#     response = client.post("/api/v1/training/jobs", json={"model_type": "baseline"})
-#     body = response.json()
-#     # print(f"Body: {body}")
+def test_start_training_job_uses_default_dataset(
+    client: TestClient,
+    patched_training_service: TrainingJobService,
+) -> None:
+    response = client.post("/api/v1/training/jobs", json={"model_type": "baseline"})
+    body = response.json()
+    print(f"Body: {body}")
     
-#     assert response.status_code == 202
-#     assert body["status"] == "running"
-#     assert body["model_type"] == "baseline"
-#     assert body["dataset_path"].endswith("fraudTrain.csv")
-#     assert body["dataset_metadata"]["size_bytes"] > 0
-#     assert patched_training_service._registry_path.exists()
+    assert response.status_code == 202
+    assert body["status"] == "running"
+    assert body["model_type"] == "baseline"
+    assert body["dataset_path"].endswith("fraudTrain.csv")
+    assert body["dataset_metadata"]["size_bytes"] > 0
+    assert patched_training_service._registry_path.exists()
 
 
 # def test_start_training_job_rejects_invalid_path(client: TestClient, patched_training_service: TrainingJobService) -> None:
