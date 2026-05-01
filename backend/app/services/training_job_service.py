@@ -8,7 +8,7 @@ import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Callable, Literal
 
 from app.core.config import settings
 
@@ -119,11 +119,16 @@ class TrainingJobRecord:
 
 
 class TrainingJobService:
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        process_factory: Callable[..., subprocess.Popen[Any]] | None = None,
+    ) -> None:
+        # Allow tests to inject a fake process factory instead of spawning a real subprocess.
         self._lock = threading.RLock()
         self._jobs: dict[str, TrainingJobRecord] = {}
         self._processes: dict[str, subprocess.Popen[Any]] = {}
         self._log_files: dict[str, Any] = {}
+        self._process_factory = process_factory or subprocess.Popen
 
         self._training_data_root = Path(settings.training_data_root).resolve()
         self._artifacts_root = Path(settings.training_artifacts_root).resolve()
@@ -136,9 +141,6 @@ class TrainingJobService:
         self._load_registry()
 
     def start_job(self, request: dict[str, Any]) -> dict[str, Any]:
-        
-        print(f"Received training job request: {request}")
-        
         model_type = request.get("model_type", "sequence")
         dataset_path = request.get("dataset_path")
         feature_spec_path = request.get("feature_spec_path")
@@ -159,7 +161,8 @@ class TrainingJobService:
             artifacts_dir = (self._artifacts_root / "jobs" / job_id).resolve()
             artifacts_dir.mkdir(parents=True, exist_ok=True)
             log_path = artifacts_dir / "train.log"
-            print(f"log_path: {log_path}")
+            
+            
             resolved_feature_spec_path = self._resolve_feature_spec_path(feature_spec_path)
 
             command = self._build_command(
@@ -190,7 +193,8 @@ class TrainingJobService:
 
             try:
                 log_file = log_path.open("a", encoding="utf-8")
-                process = subprocess.Popen(
+                # The factory keeps process creation mockable for tests and isolated runs.
+                process = self._process_factory(
                     command,
                     cwd=str(self._backend_root),
                     stdout=log_file,
@@ -258,9 +262,12 @@ class TrainingJobService:
             return record.to_dict()
 
     def _resolve_dataset_path(self, dataset_path: str | None) -> Path:
-        candidate = Path(dataset_path).resolve() if dataset_path else self._default_dataset
-        if not candidate.is_absolute():
+        candidate = Path(dataset_path) if dataset_path else self._default_dataset
+        if candidate.is_absolute():
+            candidate = candidate.resolve()
+        else:
             candidate = (self._training_data_root / candidate).resolve()
+
         try:
             candidate.relative_to(self._training_data_root)
         except ValueError as exc:

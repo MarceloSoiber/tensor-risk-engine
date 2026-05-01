@@ -25,7 +25,7 @@ def start_training_job(payload: TrainingJobStartRequest) -> TrainingJobResponse:
     except TrainingJobConflictError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
     except TrainingJobValidationError as exc:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     return TrainingJobResponse.model_validate(job)
 
 
@@ -51,4 +51,3 @@ def cancel_training_job(job_id: str) -> TrainingJobResponse:
     except TrainingJobNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     return TrainingJobResponse.model_validate(job)
-
