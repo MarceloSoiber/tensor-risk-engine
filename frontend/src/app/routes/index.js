@@ -6,10 +6,10 @@ import { createTransactionsPage } from "../../modules/transactions/page.js";
 
 const ROUTE_DEFINITIONS = [
   { hash: "#/dashboard", label: "Dashboard", render: createDashboardPage },
-  { hash: "#/auth", label: "Auth", render: createAuthPage },
+  { hash: "#/auth", label: "Auth", render: createAuthPage, sidebar: false },
   { hash: "#/transactions", label: "Transactions", render: createTransactionsPage },
   { hash: "#/fraud", label: "Fraud", render: createFraudPage },
-  { hash: "#/model-monitoring", label: "Model Monitoring", render: createModelMonitoringPage },
+  { hash: "#/model-training", label: "Model training", render: createModelMonitoringPage },
 ];
 
 export function createRoutes(context) {

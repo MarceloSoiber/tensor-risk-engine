@@ -51,3 +51,15 @@ def cancel_training_job(job_id: str) -> TrainingJobResponse:
     except TrainingJobNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     return TrainingJobResponse.model_validate(job)
+
+
+@router.delete("/jobs/{job_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_training_job(job_id: str) -> None:
+    try:
+        training_job_service.delete_job(job_id)
+    except TrainingJobNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except TrainingJobConflictError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+    except TrainingJobValidationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc

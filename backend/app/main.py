@@ -20,10 +20,10 @@ app.include_router(training_router, prefix="/api")
 
 
 @app.get("/")
-def root() -> dict[str, str]:
+async def root() -> dict[str, str]:
     return {"message": "Backend online"}
 
 
 @app.get("/api/health")
-def legacy_health() -> dict[str, str]:
+async def legacy_health() -> dict[str, str]:
     return {"status": "ok"}

@@ -11,21 +11,23 @@ from app.services.risk_service import RiskService
 
 router = APIRouter(prefix="/v1", tags=["prediction"])
 
+model_loader = ModelLoader()
+
 risk_service = RiskService(
     repository=InMemoryTransactionRepository(),
     feature_builder=FeatureBuilder(),
-    inference_engine=RiskInferenceEngine(),
-    model_loader=ModelLoader(),
+    inference_engine=RiskInferenceEngine(model_loader=model_loader),
+    model_loader=model_loader,
 )
 
 
 @router.get("/health", tags=["health"])
-def health() -> dict[str, str]:
+async def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
 @router.post("/predict", response_model=PredictResponse)
-def predict(payload: PredictRequest) -> PredictResponse:
+async def predict(payload: PredictRequest) -> PredictResponse:
     transaction = Transaction(
         amount=payload.amount,
         velocity_1h=payload.velocity_1h,

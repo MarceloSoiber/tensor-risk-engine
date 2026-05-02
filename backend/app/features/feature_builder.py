@@ -8,6 +8,8 @@ class FeatureBuilder:
         normalized_velocity = min(transaction.velocity_1h / 20.0, 1.0)
 
         return {
+            "raw_amount": transaction.amount,
+            "raw_velocity_1h": float(transaction.velocity_1h),
             "amount": max(0.0, normalized_amount),
             "velocity_1h": max(0.0, normalized_velocity),
             "merchant_risk": max(0.0, min(1.0, transaction.merchant_risk)),

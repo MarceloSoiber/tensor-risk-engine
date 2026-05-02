@@ -67,6 +67,27 @@ def _build_loader(arrays, batch_size: int, shuffle: bool) -> DataLoader:
     )
 
 
+def _save_progress(
+    output_dir: Path,
+    *,
+    stage: str,
+    epoch: int,
+    total_epochs: int,
+    best_val_pr_auc: float | None = None,
+) -> None:
+    percent = min(max(epoch / max(total_epochs, 1), 0.0), 1.0) * 100.0
+    save_json(
+        output_dir / "training_progress.json",
+        {
+            "stage": stage,
+            "progress_epoch": int(epoch),
+            "progress_total": int(total_epochs),
+            "progress_percent": float(percent),
+            "best_val_pr_auc": best_val_pr_auc,
+        },
+    )
+
+
 def _predict_scores(model: SequenceFraudModel, loader: DataLoader, device: torch.device) -> tuple[np.ndarray, np.ndarray]:
     model.eval()
     all_scores: list[np.ndarray] = []
@@ -92,6 +113,7 @@ def main() -> None:
 
     output_dir = Path(args.output_dir)
     ensure_dir(output_dir)
+    _save_progress(output_dir, stage="Preparing data", epoch=0, total_epochs=args.epochs)
 
     frame, spec, preproc_artifacts = run_data_pipeline(dataset_path=args.dataset, spec_path=args.feature_spec)
     numeric_columns = preproc_artifacts.numeric_columns
@@ -202,10 +224,26 @@ def main() -> None:
             epochs_without_improvement = 0
         else:
             epochs_without_improvement += 1
-            if epochs_without_improvement >= args.patience:
-                break
+
+        _save_progress(
+            output_dir,
+            stage="Training",
+            epoch=epoch,
+            total_epochs=args.epochs,
+            best_val_pr_auc=best_pr_auc,
+        )
+
+        if epochs_without_improvement >= args.patience:
+            break
 
     model.load_state_dict(best_state)
+    _save_progress(
+        output_dir,
+        stage="Evaluating",
+        epoch=max(best_epoch, 0),
+        total_epochs=args.epochs,
+        best_val_pr_auc=best_pr_auc,
+    )
     y_val, val_scores = _predict_scores(model, val_loader, device=device)
     tuned_threshold = find_threshold_for_precision(y_val, val_scores, min_precision=0.8) if len(y_val) else 0.5
 
@@ -247,6 +285,13 @@ def main() -> None:
     save_json(output_dir / "thresholds.json", {"decision_threshold": tuned_threshold})
     save_json(output_dir / "metrics_val.json", val_metrics.__dict__ if val_metrics else {})
     save_json(output_dir / "metrics_test.json", test_metrics.__dict__ if test_metrics else {})
+    _save_progress(
+        output_dir,
+        stage="Completed",
+        epoch=args.epochs,
+        total_epochs=args.epochs,
+        best_val_pr_auc=best_pr_auc,
+    )
 
     print("Sequence training complete.")
     if val_metrics is not None:
@@ -257,4 +302,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

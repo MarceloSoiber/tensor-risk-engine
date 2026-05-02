@@ -1,5 +1,5 @@
 import { createAppContext } from "./app/providers/index.js";
-import { createAppShell } from "./app/layout/app-shell.js";
+import { createAppShell, updateActiveSidebarLink } from "./app/layout/app-shell.js";
 import { createRoutes, resolveRoute } from "./app/routes/index.js";
 
 const root = document.getElementById("app");
@@ -10,26 +10,25 @@ if (!root) {
 
 const context = createAppContext();
 const routes = createRoutes(context);
+const { shell, workspace } = createAppShell({
+  appName: context.appName,
+  tagline: context.tagline,
+  routes,
+  activeHash: window.location.hash || "#/dashboard",
+});
+
+root.replaceChildren(shell);
 
 function render() {
   const route = resolveRoute(routes, window.location.hash);
   document.title = `${route.label} | ${context.appName}`;
-
-  root.replaceChildren(
-    createAppShell({
-      appName: context.appName,
-      tagline: context.tagline,
-      routes,
-      activeHash: route.hash,
-      content: route.render(),
-    }),
-  );
+  updateActiveSidebarLink(shell, route.hash);
+  workspace.replaceChildren(route.render());
 }
 
 if (!window.location.hash) {
   window.location.hash = "#/dashboard";
-} else {
-  render();
 }
 
+render();
 window.addEventListener("hashchange", render);

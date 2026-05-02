@@ -1,33 +1,9 @@
 import { createApiCheckForm } from "../../components/forms/api-check-form.js";
 import { createHealthCard } from "../../components/charts/health-card.js";
-import { createButton } from "../../components/ui/button.js";
 import { createElement } from "../../utils/dom.js";
 
 export function createDashboardPage(context) {
-  const page = createElement("section", { className: "dashboard-screen" });
-
-  const layout = createElement("div", { className: "dashboard-layout" });
-
-  const sidebar = createElement("aside", { className: "dashboard-sidebar" });
-  sidebar.append(
-    createElement("span", { className: "panel__eyebrow", text: "Sidebar" }),
-    createElement("h3", { className: "panel__title", text: "Collapsible navigation" }),
-    createElement("p", {
-      className: "panel__description",
-      text: "Keep shortcuts, filters, and status items here so the primary canvas stays clear.",
-    }),
-    createElement("nav", { className: "dashboard-sidebar__nav", attrs: { "aria-label": "Dashboard shortcuts" } }),
-  );
-
-  const sidebarNav = sidebar.querySelector(".dashboard-sidebar__nav");
-  sidebarNav?.append(
-    createButton({ label: "Dashboard", href: "#/dashboard", variant: "secondary" }),
-    createButton({ label: "Transactions", href: "#/transactions", variant: "secondary" }),
-    createButton({ label: "Fraud", href: "#/fraud", variant: "secondary" }),
-    createButton({ label: "Model monitoring", href: "#/model-monitoring", variant: "secondary" }),
-  );
-
-  const workspace = createElement("section", { className: "dashboard-workspace" });
+  const page = createElement("section", { className: "dashboard-screen dashboard-screen--overview" });
 
   const kpis = createElement("section", { className: "dashboard-kpis" });
   kpis.append(
@@ -71,9 +47,7 @@ export function createDashboardPage(context) {
     healthCard.element,
   );
 
-  workspace.append(kpis, chartPanel, tablePanel, alertsPanel, analyzerPanel);
-  layout.append(sidebar, workspace);
-  page.append(layout);
+  page.append(kpis, chartPanel, tablePanel, alertsPanel, analyzerPanel);
   return page;
 }
 

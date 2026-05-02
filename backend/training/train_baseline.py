@@ -12,6 +12,9 @@ from training.metrics import compute_metrics, find_threshold_for_precision
 from training.pipeline import run_data_pipeline
 
 
+BASELINE_PROGRESS_TOTAL = 4
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Train a baseline logistic regression fraud model.")
     parser.add_argument("--dataset", required=True, help="Path to the CSV dataset.")
@@ -32,12 +35,28 @@ def _split_xy(frame, feature_columns, target_column):
     return x, y
 
 
+def _save_progress(output_dir: Path, *, stage: str, step: int) -> None:
+    percent = min(max(step / BASELINE_PROGRESS_TOTAL, 0.0), 1.0) * 100.0
+    save_json(
+        output_dir / "training_progress.json",
+        {
+            "stage": stage,
+            "progress_epoch": int(step),
+            "progress_total": BASELINE_PROGRESS_TOTAL,
+            "progress_percent": float(percent),
+            "best_val_pr_auc": None,
+        },
+    )
+
+
 def main() -> None:
     args = parse_args()
     output_dir = Path(args.output_dir)
     ensure_dir(output_dir)
+    _save_progress(output_dir, stage="Preparing data", step=0)
 
     frame, spec, preproc_artifacts = run_data_pipeline(dataset_path=args.dataset, spec_path=args.feature_spec)
+    _save_progress(output_dir, stage="Training", step=1)
     feature_columns = preproc_artifacts.numeric_columns + preproc_artifacts.categorical_index_columns
     target_column = spec.target_column
 
@@ -56,6 +75,7 @@ def main() -> None:
         n_jobs=-1,
     )
     model.fit(x_train, y_train)
+    _save_progress(output_dir, stage="Validating", step=2)
 
     val_scores = model.predict_proba(x_val)[:, 1]
     tuned_threshold = find_threshold_for_precision(y_val, val_scores, min_precision=0.8)
@@ -63,6 +83,7 @@ def main() -> None:
 
     test_scores = model.predict_proba(x_test)[:, 1]
     test_metrics = compute_metrics(y_test, test_scores, threshold=tuned_threshold)
+    _save_progress(output_dir, stage="Saving artifacts", step=3)
 
     joblib.dump(model, output_dir / "baseline_model.joblib")
     save_preprocessing_artifacts(output_dir, preproc_artifacts)
@@ -82,6 +103,7 @@ def main() -> None:
     save_json(output_dir / "thresholds.json", {"decision_threshold": tuned_threshold})
     save_json(output_dir / "metrics_val.json", val_metrics.__dict__)
     save_json(output_dir / "metrics_test.json", test_metrics.__dict__)
+    _save_progress(output_dir, stage="Completed", step=BASELINE_PROGRESS_TOTAL)
 
     print("Baseline training complete.")
     print(f"Validation PR-AUC: {val_metrics.pr_auc:.4f}")
@@ -90,4 +112,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

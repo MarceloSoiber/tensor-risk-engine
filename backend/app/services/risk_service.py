@@ -28,13 +28,18 @@ class RiskService:
         score_value = self._inference_engine.predict(features)
         risk_score = RiskScore(value=score_value)
 
-        decision = self._make_decision(score_value)
+        decision = self._make_decision(score_value, self._model_loader.load_decision_threshold())
         model_version = self._model_loader.load_model_version()
 
         return risk_score, decision, model_version
 
     @staticmethod
-    def _make_decision(score: float) -> Decision:
+    def _make_decision(score: float, decision_threshold: float | None = None) -> Decision:
+        if decision_threshold is not None:
+            if score >= decision_threshold:
+                return Decision(outcome=DecisionType.REJECT, reasons=["trained_model_above_threshold"])
+            return Decision(outcome=DecisionType.APPROVE, reasons=["trained_model_below_threshold"])
+
         if score <= settings.risk_score_approve_max:
             return Decision(outcome=DecisionType.APPROVE, reasons=["low_risk_profile"])
 

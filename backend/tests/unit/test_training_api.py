@@ -80,22 +80,27 @@ def test_start_training_job_uses_default_dataset(
 ) -> None:
     service, processes = patched_training_service
 
-    response = training_controller.start_training_job(TrainingJobStartRequest(model_type="baseline"))
+    response = training_controller.start_training_job(
+        TrainingJobStartRequest(model_type="baseline", run_name="  monthly baseline refresh  "),
+    )
     body = response.model_dump(mode="json")
 
     print(f"Body: {body}")
 
     fetched_job = training_controller.get_training_job(body["job_id"])
+    fetched_body = fetched_job.model_dump(mode="json")
 
     print(f"Fetched job: {fetched_job}")
 
     assert body["status"] == "running"
+    assert body["run_name"] == "monthly baseline refresh"
     assert body["model_type"] == "baseline"
     assert body["dataset_path"].endswith("fraudTrain.csv")
     assert body["dataset_metadata"]["size_bytes"] > 0
     assert service._registry_path.exists()
     assert len(processes) == 1
     assert processes[0].command[:3] == ["python", "-m", "training.train_baseline"]
+    assert fetched_body["run_name"] == "monthly baseline refresh"
 
 
 def test_start_training_job_rejects_invalid_path(
@@ -150,6 +155,36 @@ def test_training_job_integration_completes_process(
     assert "--epochs" in body["command"]
     assert "1" in body["command"]
     assert service._registry_path.exists()
+
+
+def test_delete_training_job_removes_record_and_artifacts(
+    patched_training_service: tuple[TrainingJobService, list[FakeProcess]],
+) -> None:
+    service, processes = patched_training_service
+
+    start = training_controller.start_training_job(TrainingJobStartRequest(model_type="baseline"))
+    job_id = start.job_id
+    artifacts_dir = Path(start.artifacts_dir)
+    (artifacts_dir / "training_progress.json").write_text("{}", encoding="utf-8")
+    processes[0].returncode = 0
+    training_controller.get_training_job(job_id)
+
+    training_controller.delete_training_job(job_id)
+
+    assert job_id not in service._jobs
+    assert not artifacts_dir.exists()
+
+
+def test_delete_training_job_rejects_running_job(
+    patched_training_service: tuple[TrainingJobService, list[FakeProcess]],
+) -> None:
+    training_controller_response = training_controller.start_training_job(TrainingJobStartRequest(model_type="baseline"))
+
+    with pytest.raises(HTTPException) as exc_info:
+        training_controller.delete_training_job(training_controller_response.job_id)
+
+    assert exc_info.value.status_code == 409
+    assert "cannot be removed" in exc_info.value.detail
 
 
 def test_service_layer_has_no_csv_parsing_calls() -> None:

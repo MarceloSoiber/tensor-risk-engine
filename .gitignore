@@ -9,9 +9,12 @@ __pycache__/
 .DS_Store
 data/
 logs/
+backend/training/artifacts/
 .agents/
 .vscode/
 .specify/
 AGENTS.md
 .codex
 tensor-risk-engine-roadmap.md
+# Added by code-review-graph
+.code-review-graph/

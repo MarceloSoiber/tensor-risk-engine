@@ -13,7 +13,12 @@ export async function requestJson(path, options = {}) {
     });
 
     const contentType = response.headers.get("content-type") ?? "";
-    const payload = contentType.includes("application/json") ? await response.json() : await response.text();
+    const hasEmptyBody = response.status === 204 || response.headers.get("content-length") === "0";
+    const payload = hasEmptyBody
+      ? null
+      : contentType.includes("application/json")
+        ? await response.json()
+        : await response.text();
 
     if (!response.ok) {
       const message =

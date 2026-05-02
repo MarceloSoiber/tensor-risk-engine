@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 import threading
 import uuid
@@ -48,9 +49,17 @@ def _from_iso(value: str | None) -> datetime | None:
     return datetime.fromisoformat(value)
 
 
+def _normalize_run_name(value: Any) -> str | None:
+    if value is None:
+        return None
+    cleaned = str(value).strip()
+    return cleaned or None
+
+
 @dataclass
 class TrainingJobRecord:
     job_id: str
+    run_name: str | None
     model_type: ModelType
     dataset_path: str
     artifacts_dir: str
@@ -63,6 +72,9 @@ class TrainingJobRecord:
     started_at: datetime | None = None
     finished_at: datetime | None = None
     progress_epoch: int | None = None
+    progress_total: int | None = None
+    progress_percent: float | None = None
+    progress_stage: str | None = None
     best_val_pr_auc: float | None = None
     pid: int | None = None
     return_code: int | None = None
@@ -72,6 +84,7 @@ class TrainingJobRecord:
     def to_dict(self) -> dict[str, Any]:
         return {
             "job_id": self.job_id,
+            "run_name": self.run_name,
             "model_type": self.model_type,
             "dataset_path": self.dataset_path,
             "artifacts_dir": self.artifacts_dir,
@@ -82,6 +95,9 @@ class TrainingJobRecord:
             "started_at": _to_iso(self.started_at),
             "finished_at": _to_iso(self.finished_at),
             "progress_epoch": self.progress_epoch,
+            "progress_total": self.progress_total,
+            "progress_percent": self.progress_percent,
+            "progress_stage": self.progress_stage,
             "best_val_pr_auc": self.best_val_pr_auc,
             "pid": self.pid,
             "return_code": self.return_code,
@@ -98,6 +114,7 @@ class TrainingJobRecord:
         metadata = payload.get("dataset_metadata") or {}
         return cls(
             job_id=str(payload["job_id"]),
+            run_name=_normalize_run_name(payload.get("run_name")),
             model_type=payload["model_type"],
             dataset_path=str(payload["dataset_path"]),
             artifacts_dir=str(payload["artifacts_dir"]),
@@ -108,6 +125,9 @@ class TrainingJobRecord:
             started_at=_from_iso(payload.get("started_at")),
             finished_at=_from_iso(payload.get("finished_at")),
             progress_epoch=payload.get("progress_epoch"),
+            progress_total=payload.get("progress_total"),
+            progress_percent=payload.get("progress_percent"),
+            progress_stage=payload.get("progress_stage"),
             best_val_pr_auc=payload.get("best_val_pr_auc"),
             pid=payload.get("pid"),
             return_code=payload.get("return_code"),
@@ -144,7 +164,7 @@ class TrainingJobService:
         model_type = request.get("model_type", "sequence")
         dataset_path = request.get("dataset_path")
         feature_spec_path = request.get("feature_spec_path")
-        run_name = request.get("run_name")
+        run_name = _normalize_run_name(request.get("run_name"))
         sequence_config = request.get("sequence_config") or {}
 
         if model_type not in {"baseline", "sequence"}:
@@ -177,6 +197,7 @@ class TrainingJobService:
 
             record = TrainingJobRecord(
                 job_id=job_id,
+                run_name=run_name,
                 model_type=model_type,
                 dataset_path=str(dataset),
                 artifacts_dir=str(artifacts_dir),
@@ -260,6 +281,31 @@ class TrainingJobService:
             self._close_log_locked(job_id)
             self._save_registry_locked()
             return record.to_dict()
+
+    def delete_job(self, job_id: str) -> None:
+        with self._lock:
+            record = self._jobs.get(job_id)
+            if record is None:
+                raise TrainingJobNotFoundError(f"Job '{job_id}' was not found.")
+
+            self._refresh_job_locked(record)
+            if record.status in {"queued", "running"}:
+                raise TrainingJobConflictError("A running training job cannot be removed.")
+
+            artifacts_dir = Path(record.artifacts_dir).resolve()
+            try:
+                artifacts_dir.relative_to(self._artifacts_root)
+            except ValueError as exc:
+                raise TrainingJobValidationError(
+                    "Job artifacts directory is outside the allowed artifacts root."
+                ) from exc
+
+            self._close_log_locked(job_id)
+            self._jobs.pop(job_id, None)
+            self._processes.pop(job_id, None)
+            if artifacts_dir.exists():
+                shutil.rmtree(artifacts_dir)
+            self._save_registry_locked()
 
     def _resolve_dataset_path(self, dataset_path: str | None) -> Path:
         candidate = Path(dataset_path) if dataset_path else self._default_dataset
@@ -363,12 +409,15 @@ class TrainingJobService:
 
     def _refresh_job_locked(self, record: TrainingJobRecord) -> None:
         if record.status not in {"queued", "running"}:
+            self._refresh_progress_locked(record)
             return
 
         process = self._processes.get(record.job_id)
         if process is None:
             if record.pid is not None and self._pid_is_running(record.pid):
+                self._refresh_progress_locked(record)
                 return
+            self._refresh_progress_locked(record)
             record.status = "failed"
             record.error = record.error or "Training process was not found."
             record.finished_at = record.finished_at or _utc_now()
@@ -378,12 +427,14 @@ class TrainingJobService:
 
         return_code = process.poll()
         if return_code is None:
+            self._refresh_progress_locked(record)
             if record.status == "queued":
                 record.status = "running"
                 record.started_at = record.started_at or _utc_now()
                 record.updated_at = _utc_now()
             return
 
+        self._refresh_progress_locked(record)
         record.return_code = return_code
         record.finished_at = _utc_now()
         record.updated_at = _utc_now()
@@ -392,6 +443,39 @@ class TrainingJobService:
             if return_code != 0 and not record.error:
                 record.error = "Training process finished with non-zero exit code."
         self._close_log_locked(record.job_id)
+
+    def _refresh_progress_locked(self, record: TrainingJobRecord) -> None:
+        progress_path = Path(record.artifacts_dir) / "training_progress.json"
+        if not progress_path.exists():
+            return
+
+        try:
+            payload = json.loads(progress_path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            return
+
+        progress_epoch = self._optional_int(payload.get("progress_epoch"))
+        progress_total = self._optional_int(payload.get("progress_total"))
+        progress_percent = self._optional_float(payload.get("progress_percent"))
+        stage = payload.get("stage")
+        progress_stage = str(stage) if stage else None
+        best_val_pr_auc = self._optional_float(payload.get("best_val_pr_auc"))
+
+        changed = (
+            record.progress_epoch != progress_epoch
+            or record.progress_total != progress_total
+            or record.progress_percent != progress_percent
+            or record.progress_stage != progress_stage
+            or record.best_val_pr_auc != best_val_pr_auc
+        )
+
+        record.progress_epoch = progress_epoch
+        record.progress_total = progress_total
+        record.progress_percent = progress_percent
+        record.progress_stage = progress_stage
+        record.best_val_pr_auc = best_val_pr_auc
+        if changed:
+            record.updated_at = _utc_now()
 
     def _ensure_no_running_job_locked(self) -> None:
         for record in self._jobs.values():
@@ -444,3 +528,21 @@ class TrainingJobService:
         except PermissionError:
             return True
         return True
+
+    @staticmethod
+    def _optional_int(value: Any) -> int | None:
+        if value is None:
+            return None
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return None
+
+    @staticmethod
+    def _optional_float(value: Any) -> float | None:
+        if value is None:
+            return None
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return None

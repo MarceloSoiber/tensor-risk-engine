@@ -1,3 +1,5 @@
+import asyncio
+
 import pytest
 from pydantic import ValidationError
 
@@ -16,20 +18,22 @@ def test_core_routes_are_registered() -> None:
 
 
 def test_root_returns_backend_online() -> None:
-    assert root() == {"message": "Backend online"}
+    assert asyncio.run(root()) == {"message": "Backend online"}
 
 
 def test_health_returns_ok() -> None:
-    assert health() == {"status": "ok"}
+    assert asyncio.run(health()) == {"status": "ok"}
 
 
 def test_predict_returns_risk_result() -> None:
-    response = predict(
-        PredictRequest(
-            amount=250.0,
-            velocity_1h=2,
-            merchant_risk=0.2,
-            device_trust=0.9,
+    response = asyncio.run(
+        predict(
+            PredictRequest(
+                amount=250.0,
+                velocity_1h=2,
+                merchant_risk=0.2,
+                device_trust=0.9,
+            ),
         ),
     )
     body = response.model_dump(mode="json")
@@ -37,7 +41,7 @@ def test_predict_returns_risk_result() -> None:
     assert 0.0 <= body["risk_score"] <= 1.0
     assert body["decision"] in {"approve", "review", "reject"}
     assert isinstance(body["reasons"], list)
-    assert body["model_version"] == "heuristic-v1"
+    assert body["model_version"].startswith(("baseline:", "heuristic-v1"))
 
 
 def test_predict_rejects_invalid_payload() -> None:

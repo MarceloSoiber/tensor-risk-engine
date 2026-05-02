@@ -46,6 +46,7 @@ class TrainingJobResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     job_id: str
+    run_name: str | None = None
     status: JobStatus
     model_type: ModelType
     dataset_path: str
@@ -56,6 +57,9 @@ class TrainingJobResponse(BaseModel):
     started_at: datetime | None = None
     finished_at: datetime | None = None
     progress_epoch: int | None = None
+    progress_total: int | None = None
+    progress_percent: float | None = None
+    progress_stage: str | None = None
     best_val_pr_auc: float | None = None
     pid: int | None = None
     return_code: int | None = None
