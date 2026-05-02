@@ -403,7 +403,7 @@ a {
 
 .page--transactions {
   display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(360px, 0.9fr);
+  grid-template-columns: minmax(0, 1.45fr) minmax(340px, 0.55fr);
   gap: 18px;
   align-items: start;
 }
@@ -417,13 +417,30 @@ a {
 
 .transaction-form {
   display: grid;
-  gap: 16px;
+  gap: 14px;
+}
+
+.transaction-scenarios {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.transaction-scenarios__button {
+  min-height: 42px;
+  width: 100%;
+  padding: 0 12px;
+  border-radius: 14px;
+  font-size: 0.82rem;
+  line-height: 1.15;
+  text-align: center;
+  white-space: normal;
 }
 
 .transaction-form__grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(3, minmax(150px, 1fr));
+  gap: 12px;
 }
 
 .transaction-form__actions {
@@ -443,19 +460,54 @@ a {
 
 .transaction-input {
   display: grid;
-  gap: 10px;
+  gap: 8px;
   min-width: 0;
+}
+
+.transaction-input--select {
+  position: relative;
+}
+
+.transaction-input--select::after {
+  content: "";
+  position: absolute;
+  right: 16px;
+  bottom: 17px;
+  width: 9px;
+  height: 9px;
+  border-right: 2px solid var(--accent);
+  border-bottom: 2px solid var(--accent);
+  pointer-events: none;
+  transform: rotate(45deg);
 }
 
 .transaction-input__control {
   width: 100%;
-  min-height: 48px;
-  border-radius: 16px;
+  min-height: 44px;
+  border-radius: 14px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   background: rgba(255, 255, 255, 0.03);
   color: var(--text);
   padding: 0 14px;
   outline: none;
+  font: inherit;
+}
+
+.transaction-input__control--select {
+  appearance: none;
+  min-height: 50px;
+  border-radius: 16px;
+  border-color: rgba(103, 232, 249, 0.18);
+  background:
+    linear-gradient(180deg, rgba(15, 26, 44, 0.98), rgba(7, 15, 28, 0.98));
+  cursor: pointer;
+  font-weight: 700;
+  padding-right: 42px;
+}
+
+.transaction-input__control--select option {
+  background: #07111f;
+  color: var(--text);
 }
 
 .transaction-input__control:focus {
@@ -464,16 +516,17 @@ a {
 }
 
 .transaction-status {
-  min-height: 180px;
+  min-height: 132px;
+  max-height: 260px;
 }
 
 .transaction-result {
   display: grid;
-  gap: 10px;
-  min-height: 210px;
+  gap: 8px;
+  min-height: 168px;
   align-content: center;
-  padding: 20px;
-  border-radius: 20px;
+  padding: 18px;
+  border-radius: 18px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(255, 255, 255, 0.03);
 }
@@ -514,16 +567,16 @@ a {
 .transaction-history {
   display: grid;
   gap: 10px;
-  max-height: 320px;
+  max-height: 420px;
   overflow: auto;
   padding-right: 4px;
 }
 
 .transaction-history__item {
   display: grid;
-  gap: 6px;
-  padding: 14px 16px;
-  border-radius: 16px;
+  gap: 7px;
+  padding: 12px 14px;
+  border-radius: 14px;
   border: 1px solid rgba(255, 255, 255, 0.07);
   background: rgba(255, 255, 255, 0.03);
 }
@@ -541,6 +594,10 @@ a {
 .transaction-history__item small {
   min-width: 0;
   overflow-wrap: anywhere;
+}
+
+.transaction-history__row strong {
+  font-size: 0.92rem;
 }
 
 .transaction-history__row span,
@@ -697,6 +754,118 @@ a {
 .training-input__control:focus {
   border-color: rgba(103, 232, 249, 0.45);
   box-shadow: 0 0 0 3px rgba(103, 232, 249, 0.12);
+}
+
+.dataset-picker {
+  position: relative;
+}
+
+.dataset-picker__button {
+  position: relative;
+  width: 100%;
+  min-height: 50px;
+  padding: 0 42px 0 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(103, 232, 249, 0.18);
+  background:
+    linear-gradient(180deg, rgba(15, 26, 44, 0.98), rgba(7, 15, 28, 0.98));
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  outline: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dataset-picker__button::after {
+  content: "";
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  width: 9px;
+  height: 9px;
+  border-right: 2px solid var(--accent);
+  border-bottom: 2px solid var(--accent);
+  transform: translateY(-65%) rotate(45deg);
+  transition: transform 160ms ease;
+}
+
+.dataset-picker.is-open .dataset-picker__button {
+  border-color: rgba(103, 232, 249, 0.46);
+  box-shadow: 0 0 0 3px rgba(103, 232, 249, 0.12);
+}
+
+.dataset-picker.is-open .dataset-picker__button::after {
+  transform: translateY(-30%) rotate(225deg);
+}
+
+.dataset-picker__button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.dataset-picker__list {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  display: grid;
+  gap: 6px;
+  max-height: 240px;
+  overflow: auto;
+  padding: 8px;
+  border: 1px solid rgba(103, 232, 249, 0.22);
+  border-radius: 18px;
+  background: #07111f;
+  box-shadow: 0 24px 52px rgba(0, 0, 0, 0.44);
+}
+
+.dataset-picker__list[hidden] {
+  display: none;
+}
+
+.dataset-picker__option {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.dataset-picker__option span,
+.dataset-picker__option small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dataset-picker__option span {
+  font-weight: 750;
+}
+
+.dataset-picker__option small {
+  color: var(--muted);
+}
+
+.dataset-picker__option:hover,
+.dataset-picker__option.is-selected {
+  border-color: rgba(103, 232, 249, 0.24);
+  background: rgba(103, 232, 249, 0.09);
+}
+
+.dataset-picker__option.is-selected small {
+  color: #b9f7ff;
 }
 
 .training-submit-status {
@@ -986,6 +1155,10 @@ a {
   .page--transactions {
     grid-template-columns: 1fr;
   }
+
+  .transaction-form__grid {
+    grid-template-columns: repeat(2, minmax(150px, 1fr));
+  }
 }
 
 @media (max-width: 960px) {
@@ -1070,6 +1243,10 @@ a {
   }
 
   .transaction-form__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .transaction-scenarios {
     grid-template-columns: 1fr;
   }
 

@@ -42,6 +42,22 @@ class DatasetMetadataResponse(BaseModel):
     modified_at: datetime
 
 
+class TrainingDatasetResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    path: str
+    name: str
+    size_bytes: int = Field(..., ge=0)
+    modified_at: datetime
+    is_default: bool = False
+
+
+class TrainingDatasetListResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    datasets: list[TrainingDatasetResponse]
+
+
 class TrainingJobResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

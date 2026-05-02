@@ -14,6 +14,10 @@ export function listTrainingJobs() {
   return requestJson("/api/v1/training/jobs");
 }
 
+export function listTrainingDatasets() {
+  return requestJson("/api/v1/training/datasets");
+}
+
 export async function deleteTrainingJob(jobId) {
   await requestJson(`/api/v1/training/jobs/${encodeURIComponent(jobId)}`, {
     method: "DELETE",

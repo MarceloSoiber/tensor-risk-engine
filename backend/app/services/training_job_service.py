@@ -255,6 +255,33 @@ class TrainingJobService:
             ordered = sorted(self._jobs.values(), key=lambda item: item.created_at, reverse=True)
             return [job.to_dict() for job in ordered]
 
+    def list_datasets(self) -> list[dict[str, Any]]:
+        datasets: list[dict[str, Any]] = []
+        if not self._training_data_root.exists():
+            return datasets
+
+        for dataset in sorted(self._training_data_root.rglob("*.csv")):
+            if not dataset.is_file():
+                continue
+            resolved_dataset = dataset.resolve()
+            try:
+                relative_path = resolved_dataset.relative_to(self._training_data_root)
+            except ValueError:
+                continue
+
+            stat = resolved_dataset.stat()
+            datasets.append(
+                {
+                    "path": relative_path.as_posix(),
+                    "name": resolved_dataset.name,
+                    "size_bytes": int(stat.st_size),
+                    "modified_at": datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc),
+                    "is_default": resolved_dataset == self._default_dataset,
+                }
+            )
+
+        return datasets
+
     def cancel_job(self, job_id: str) -> dict[str, Any]:
         with self._lock:
             record = self._jobs.get(job_id)

@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException, status
 
 from app.domain.transaction import Transaction
 from app.features.feature_builder import FeatureBuilder
@@ -30,12 +30,29 @@ async def health() -> dict[str, str]:
 async def predict(payload: PredictRequest) -> PredictResponse:
     transaction = Transaction(
         amount=payload.amount,
-        velocity_1h=payload.velocity_1h,
-        merchant_risk=payload.merchant_risk,
-        device_trust=payload.device_trust,
+        transaction_datetime=payload.transaction_datetime,
+        merchant=payload.merchant,
+        category=payload.category,
+        gender=payload.gender,
+        state=payload.state,
+        job=payload.job,
+        city_population=payload.city_population,
+        customer_latitude=payload.customer_latitude,
+        customer_longitude=payload.customer_longitude,
+        merchant_latitude=payload.merchant_latitude,
+        merchant_longitude=payload.merchant_longitude,
+        transactions_last_hour=payload.transactions_last_hour,
+        transactions_last_24h=payload.transactions_last_24h,
+        average_amount_24h=payload.average_amount_24h,
     )
 
-    risk_score, decision, model_version = risk_service.evaluate(transaction)
+    try:
+        risk_score, decision, model_version = risk_service.evaluate(
+            transaction,
+            training_job_id=payload.training_job_id,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
 
     return PredictResponse(
         risk_score=risk_score.value,

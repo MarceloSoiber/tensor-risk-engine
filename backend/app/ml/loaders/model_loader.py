@@ -16,7 +16,9 @@ class BaselineModelArtifacts:
     scaler: Any
     feature_columns: list[str]
     numeric_columns: list[str]
+    categorical_columns: list[str]
     categorical_index_columns: list[str]
+    category_mappings: dict[str, dict[str, int]]
     numeric_fill_values: dict[str, float]
     decision_threshold: float
     model_version: str
@@ -48,6 +50,20 @@ class ModelLoader:
         self._baseline_artifacts = artifacts
         self._baseline_artifacts_dir = artifacts_dir
         return artifacts
+
+    def load_baseline_model_by_job_id(self, job_id: str) -> BaselineModelArtifacts | None:
+        normalized_job_id = str(job_id).strip()
+        if not normalized_job_id:
+            return None
+
+        artifacts_dir = self._find_succeeded_baseline_artifacts_dir_by_job_id(normalized_job_id)
+        if artifacts_dir is None:
+            return None
+
+        try:
+            return self._load_baseline_artifacts(artifacts_dir)
+        except (OSError, ValueError, KeyError, TypeError):
+            return None
 
     def load_model_version(self) -> str:
         artifacts = self.load_current_baseline_model()
@@ -88,6 +104,36 @@ class ModelLoader:
             return None
         return artifacts_dir
 
+    def _find_succeeded_baseline_artifacts_dir_by_job_id(self, job_id: str) -> Path | None:
+        registry_path = Path(settings.training_jobs_registry_path)
+        if not registry_path.exists():
+            return None
+
+        registry = _read_json(registry_path)
+        jobs = registry.get("jobs", [])
+        if not isinstance(jobs, list):
+            return None
+
+        target_job = next(
+            (
+                job
+                for job in jobs
+                if isinstance(job, dict)
+                and str(job.get("job_id")) == job_id
+                and job.get("status") == "succeeded"
+                and job.get("model_type") == "baseline"
+                and job.get("artifacts_dir")
+            ),
+            None,
+        )
+        if target_job is None:
+            return None
+
+        artifacts_dir = _resolve_artifacts_path(str(target_job["artifacts_dir"]))
+        if not (artifacts_dir / "baseline_model.joblib").exists():
+            return None
+        return artifacts_dir
+
     def _load_baseline_artifacts(self, artifacts_dir: Path) -> BaselineModelArtifacts:
         metadata = _read_json(artifacts_dir / "training_metadata.json")
         preprocessing = _read_json(artifacts_dir / "preprocessing_metadata.json")
@@ -95,7 +141,9 @@ class ModelLoader:
 
         feature_columns = _require_string_list(metadata, "feature_columns")
         numeric_columns = _require_string_list(preprocessing, "numeric_columns")
+        categorical_columns = _require_string_list(preprocessing, "categorical_columns")
         categorical_index_columns = _require_string_list(preprocessing, "categorical_index_columns")
+        category_mappings = _require_category_mappings(_read_json(artifacts_dir / "category_mappings.json"))
         numeric_fill_values = _require_float_mapping(preprocessing, "numeric_fill_values")
         decision_threshold = float(thresholds.get("decision_threshold", 0.5))
 
@@ -104,7 +152,9 @@ class ModelLoader:
             scaler=joblib.load(artifacts_dir / "scaler.joblib"),
             feature_columns=feature_columns,
             numeric_columns=numeric_columns,
+            categorical_columns=categorical_columns,
             categorical_index_columns=categorical_index_columns,
+            category_mappings=category_mappings,
             numeric_fill_values=numeric_fill_values,
             decision_threshold=max(0.0, min(1.0, decision_threshold)),
             model_version=f"baseline:{artifacts_dir.name}",
@@ -140,3 +190,12 @@ def _require_float_mapping(payload: dict[str, Any], key: str) -> dict[str, float
     if not isinstance(value, dict):
         raise ValueError(f"{key} must be an object.")
     return {str(item_key): float(item_value) for item_key, item_value in value.items()}
+
+
+def _require_category_mappings(payload: dict[str, Any]) -> dict[str, dict[str, int]]:
+    mappings: dict[str, dict[str, int]] = {}
+    for column, mapping in payload.items():
+        if not isinstance(mapping, dict):
+            raise ValueError("category_mappings values must be objects.")
+        mappings[str(column)] = {str(raw_value): int(index) for raw_value, index in mapping.items()}
+    return mappings

@@ -69,10 +69,28 @@ def test_training_job_start_route_is_registered() -> None:
     routes = {
         (route.path, tuple(sorted(route.methods or [])))
         for route in app.routes
-        if getattr(route, "path", None) == "/api/v1/training/jobs"
+        if getattr(route, "path", None) in {"/api/v1/training/jobs", "/api/v1/training/datasets"}
     }
 
     assert ("/api/v1/training/jobs", ("POST",)) in routes
+    assert ("/api/v1/training/datasets", ("GET",)) in routes
+
+
+def test_list_training_datasets_returns_allowed_csv_files(
+    patched_training_service: tuple[TrainingJobService, list[FakeProcess]],
+) -> None:
+    service, _ = patched_training_service
+
+    response = training_controller.list_training_datasets()
+    body = response.model_dump(mode="json")
+
+    dataset_paths = {dataset["path"] for dataset in body["datasets"]}
+    default_dataset = next(dataset for dataset in body["datasets"] if dataset["is_default"])
+
+    assert dataset_paths == {"custom.csv", "fraudTrain.csv"}
+    assert default_dataset["path"] == "fraudTrain.csv"
+    assert all(dataset["size_bytes"] > 0 for dataset in body["datasets"])
+    assert service._training_data_root.name == "training-data"
 
 
 def test_start_training_job_uses_default_dataset(

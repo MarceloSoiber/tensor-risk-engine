@@ -3,6 +3,8 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException, status
 
 from app.schemas.training import (
+    TrainingDatasetListResponse,
+    TrainingDatasetResponse,
     TrainingJobListResponse,
     TrainingJobResponse,
     TrainingJobStartRequest,
@@ -42,6 +44,14 @@ def get_training_job(job_id: str) -> TrainingJobResponse:
 def list_training_jobs() -> TrainingJobListResponse:
     jobs = training_job_service.list_jobs()
     return TrainingJobListResponse(jobs=[TrainingJobResponse.model_validate(item) for item in jobs])
+
+
+@router.get("/datasets", response_model=TrainingDatasetListResponse)
+def list_training_datasets() -> TrainingDatasetListResponse:
+    datasets = training_job_service.list_datasets()
+    return TrainingDatasetListResponse(
+        datasets=[TrainingDatasetResponse.model_validate(item) for item in datasets],
+    )
 
 
 @router.post("/jobs/{job_id}/cancel", response_model=TrainingJobResponse)

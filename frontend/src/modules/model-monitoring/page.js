@@ -1,6 +1,11 @@
 import { createButton } from "../../components/ui/button.js";
 import { createElement, formatJson } from "../../utils/dom.js";
-import { useDeleteTrainingJob, useStartTrainingJob, useTrainingJobs } from "../../hooks/use-training-jobs.js";
+import {
+  useDeleteTrainingJob,
+  useStartTrainingJob,
+  useTrainingDatasets,
+  useTrainingJobs,
+} from "../../hooks/use-training-jobs.js";
 
 export function createModelMonitoringPage() {
   const page = createElement("section", { className: "page page--model-monitoring" });
@@ -22,18 +27,24 @@ function createTrainingLauncher({ onJobStarted } = {}) {
     createElement("h2", { className: "panel__title", text: "Start a new training run" }),
     createElement("p", {
       className: "panel__description",
-      text: "Choose a model type, give the run a name, and the training pipeline will always use fraudTrain.csv.",
+      text: "Choose a dataset, select a model type, and start a tracked training job.",
     }),
   );
 
   const form = createElement("div", { className: "training-form" });
+  const datasetSelect = createDatasetSelect({
+    onChange: (dataset) => {
+      datasetSummary.textContent = dataset?.path || "Default dataset";
+    },
+  });
   const summary = createElement("div", { className: "training-summary" });
+  const datasetSummary = createElement("strong", { text: "Loading datasets..." });
   summary.append(
     createElement("div", {
       className: "training-summary__item",
       children: [
         createElement("span", { text: "Dataset" }),
-        createElement("strong", { text: "fraudTrain.csv" }),
+        datasetSummary,
       ],
     }),
     createElement("div", {
@@ -51,6 +62,7 @@ function createTrainingLauncher({ onJobStarted } = {}) {
     onClick: () =>
       submitTrainingJob({
         model_type: modelOptions.getValue(),
+        datasetSelect,
         runNameInput,
         featureSpecInput,
         status,
@@ -88,8 +100,9 @@ function createTrainingLauncher({ onJobStarted } = {}) {
   });
 
   actions.append(startButton);
-  form.append(summary, modelTypeGroup, runNameInput.wrapper, featureSpecInput.wrapper, actions, status);
+  form.append(summary, datasetSelect.wrapper, modelTypeGroup, runNameInput.wrapper, featureSpecInput.wrapper, actions, status);
   panel.append(form);
+  loadDatasetOptions({ datasetSelect, datasetSummary, status });
   return panel;
 }
 
@@ -100,7 +113,7 @@ function createJobsPanel() {
     createElement("h2", { className: "panel__title", text: "Training job history" }),
     createElement("p", {
       className: "panel__description",
-      text: "Refresh the latest jobs to inspect status, model type, and the fixed training dataset.",
+      text: "Refresh the latest jobs to inspect status, model type, and selected dataset.",
     }),
   );
 
@@ -262,9 +275,128 @@ function createInputField({ label, name, placeholder }) {
   return { wrapper, input };
 }
 
-async function submitTrainingJob({ model_type, runNameInput, featureSpecInput, status, onJobStarted }) {
+function createDatasetSelect({ onChange } = {}) {
+  const wrapper = createElement("div", { className: "training-input dataset-picker" });
+  const button = createElement("button", {
+    className: "dataset-picker__button",
+    text: "Loading datasets...",
+    attrs: {
+      type: "button",
+      "aria-haspopup": "listbox",
+      "aria-expanded": "false",
+      disabled: true,
+    },
+  });
+  const list = createElement("div", {
+    className: "dataset-picker__list",
+    attrs: { role: "listbox", hidden: true },
+  });
+
+  let datasets = [];
+  let selectedPath = "";
+
+  button.addEventListener("click", () => {
+    const isOpen = button.getAttribute("aria-expanded") === "true";
+    setOpen(!isOpen);
+  });
+
+  document.addEventListener("click", (event) => {
+    if (!wrapper.contains(event.target)) {
+      setOpen(false);
+    }
+  });
+
+  wrapper.append(
+    createElement("span", { className: "training-field__label", text: "Dataset" }),
+    button,
+    list,
+  );
+
+  return {
+    wrapper,
+    setDatasets: (nextDatasets) => {
+      datasets = nextDatasets;
+      button.disabled = datasets.length === 0;
+      selectedPath = datasets.find((dataset) => dataset.is_default)?.path ?? datasets[0]?.path ?? "";
+      renderDatasetOptions();
+      selectDataset(selectedPath);
+    },
+    setFallback: () => {
+      datasets = [];
+      selectedPath = "";
+      button.disabled = false;
+      button.textContent = "fraudTrain.csv (default)";
+      list.replaceChildren();
+      onChange?.({ path: "Default dataset" });
+    },
+    getValue: () => selectedPath || null,
+  };
+
+  function renderDatasetOptions() {
+    list.replaceChildren(
+      ...datasets.map((dataset) => {
+        const option = createElement("button", {
+          className: `dataset-picker__option${dataset.path === selectedPath ? " is-selected" : ""}`,
+          attrs: {
+            type: "button",
+            role: "option",
+            "aria-selected": dataset.path === selectedPath ? "true" : "false",
+          },
+        });
+        option.append(
+          createElement("span", { text: dataset.path }),
+          createElement("small", {
+            text: `${formatFileSize(dataset.size_bytes)}${dataset.is_default ? " · default" : ""}`,
+          }),
+        );
+        option.addEventListener("click", () => {
+          selectDataset(dataset.path);
+          setOpen(false);
+        });
+        return option;
+      }),
+    );
+  }
+
+  function selectDataset(path) {
+    selectedPath = path;
+    const dataset = datasets.find((item) => item.path === selectedPath) ?? null;
+    button.textContent = dataset ? `${dataset.path}${dataset.is_default ? " (default)" : ""}` : "Select dataset";
+    renderDatasetOptions();
+    onChange?.(dataset);
+  }
+
+  function setOpen(isOpen) {
+    button.setAttribute("aria-expanded", String(isOpen));
+    list.hidden = !isOpen;
+    wrapper.classList.toggle("is-open", isOpen);
+  }
+}
+
+async function loadDatasetOptions({ datasetSelect, datasetSummary, status }) {
+  await useTrainingDatasets({
+    onPending: () => {
+      datasetSummary.textContent = "Loading datasets...";
+    },
+    onSuccess: (payload) => {
+      const datasets = payload.datasets ?? [];
+      datasetSelect.setDatasets(datasets);
+      if (!datasets.length) {
+        datasetSummary.textContent = "Default dataset";
+      }
+    },
+    onError: (error) => {
+      datasetSelect.setFallback();
+      datasetSummary.textContent = "Default dataset";
+      status.textContent = `Unable to load datasets: ${error.message}. The default dataset will be used.`;
+    },
+  });
+}
+
+async function submitTrainingJob({ model_type, datasetSelect, runNameInput, featureSpecInput, status, onJobStarted }) {
   const payload = {
     model_type,
+    dataset_path: datasetSelect.getValue(),
     run_name: trimToNull(runNameInput.input.value),
     feature_spec_path: trimToNull(featureSpecInput.input.value),
   };
@@ -283,6 +415,7 @@ async function submitTrainingJob({ model_type, runNameInput, featureSpecInput, s
         run_name: job.run_name,
         status: job.status,
         model_type: job.model_type,
+        dataset_path: job.dataset_path,
       });
       onJobStarted?.({ silent: true });
     },
@@ -477,4 +610,17 @@ function clamp(value, min, max) {
 function trimToNull(value) {
   const normalized = value.trim();
   return normalized.length > 0 ? normalized : null;
+}
+
+function formatFileSize(sizeBytes) {
+  const value = Number(sizeBytes);
+  if (!Number.isFinite(value) || value <= 0) {
+    return "0 B";
+  }
+
+  if (value < 1024 * 1024) {
+    return `${Math.round(value / 1024)} KB`;
+  }
+
+  return `${(value / (1024 * 1024)).toFixed(1)} MB`;
 }

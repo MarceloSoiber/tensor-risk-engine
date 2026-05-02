@@ -5,25 +5,25 @@ import pandas as pd
 
 from app.ml.loaders.model_loader import BaselineModelArtifacts, ModelLoader
 
+OOV_INDEX = 1
+
 
 class RiskInferenceEngine:
     def __init__(self, model_loader: ModelLoader | None = None) -> None:
         self._model_loader = model_loader or ModelLoader()
 
-    def predict(self, features: dict[str, float]) -> float:
-        trained_model = self._model_loader.load_current_baseline_model()
+    def predict(self, features: dict[str, float | str], model_artifacts: BaselineModelArtifacts | None = None) -> float:
+        trained_model = model_artifacts or self._model_loader.load_current_baseline_model()
         if trained_model is not None:
             return self._predict_with_baseline_model(trained_model, features)
 
         return self._predict_with_heuristic(features)
 
-    def _predict_with_baseline_model(self, artifacts: BaselineModelArtifacts, features: dict[str, float]) -> float:
+    def _predict_with_baseline_model(self, artifacts: BaselineModelArtifacts, features: dict[str, float | str]) -> float:
         numeric_values = dict(artifacts.numeric_fill_values)
-        amount = max(0.0, float(features["raw_amount"]))
-
-        numeric_values["amt"] = amount
-        numeric_values["log1p_amt"] = float(np.log1p(amount))
-        numeric_values["tx_count_1h"] = max(0.0, float(features["raw_velocity_1h"]))
+        for column in artifacts.numeric_columns:
+            if column in features:
+                numeric_values[column] = float(features[column])
 
         numeric_frame = pd.DataFrame(
             [[numeric_values.get(column, 0.0) for column in artifacts.numeric_columns]],
@@ -37,7 +37,7 @@ class RiskInferenceEngine:
             if column in scaled_numeric:
                 model_input.append(float(scaled_numeric[column]))
             elif column in artifacts.categorical_index_columns:
-                model_input.append(1.0)
+                model_input.append(float(self._category_index_for_column(column, artifacts, features)))
             else:
                 model_input.append(0.0)
 
@@ -45,11 +45,35 @@ class RiskInferenceEngine:
         return max(0.0, min(1.0, float(score)))
 
     @staticmethod
-    def _predict_with_heuristic(features: dict[str, float]) -> float:
+    def _category_index_for_column(
+        index_column: str,
+        artifacts: BaselineModelArtifacts,
+        features: dict[str, float | str],
+    ) -> int:
+        source_column = index_column.removesuffix("_idx")
+        raw_index = features.get(index_column)
+        if raw_index is not None:
+            return int(float(raw_index))
+
+        mapping = artifacts.category_mappings.get(source_column, {})
+        raw_value = str(features.get(source_column, "__MISSING__"))
+        return mapping.get(raw_value, OOV_INDEX)
+
+    @staticmethod
+    def _predict_with_heuristic(features: dict[str, float | str]) -> float:
+        amount_score = min(max(float(features["log1p_amt"]) / np.log1p(5000.0), 0.0), 1.0)
+        velocity_1h_score = min(max(float(features["tx_count_1h"]) / 20.0, 0.0), 1.0)
+        velocity_24h_score = min(max(float(features["tx_count_24h"]) / 100.0, 0.0), 1.0)
+        distance_score = min(max(float(features["geo_distance_km"]) / 500.0, 0.0), 1.0)
+        amount_delta_score = min(max(float(features["amount_delta_ratio_24h"]) / 5.0, 0.0), 1.0)
+        night_score = float(features["is_night"])
+
         risk_score = (
-            0.35 * features["amount"]
-            + 0.35 * features["velocity_1h"]
-            + 0.25 * features["merchant_risk"]
-            + 0.05 * (1.0 - features["device_trust"])
+            0.30 * amount_score
+            + 0.25 * velocity_1h_score
+            + 0.15 * velocity_24h_score
+            + 0.15 * distance_score
+            + 0.10 * amount_delta_score
+            + 0.05 * night_score
         )
         return max(0.0, min(1.0, risk_score))

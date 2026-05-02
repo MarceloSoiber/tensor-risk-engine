@@ -1,4 +1,9 @@
-import { deleteTrainingJob, listTrainingJobs, startTrainingJob } from "../services/trainingService.js";
+import {
+  deleteTrainingJob,
+  listTrainingDatasets,
+  listTrainingJobs,
+  startTrainingJob,
+} from "../services/trainingService.js";
 
 export async function useTrainingJobs({ onPending, onSuccess, onError } = {}) {
   try {
@@ -21,6 +26,19 @@ export async function useStartTrainingJob({ payload, onPending, onSuccess, onErr
     return response;
   } catch (error) {
     const normalizedError = error instanceof Error ? error : new Error("Unexpected training API error.");
+    onError?.(normalizedError);
+    return null;
+  }
+}
+
+export async function useTrainingDatasets({ onPending, onSuccess, onError } = {}) {
+  try {
+    onPending?.();
+    const payload = await listTrainingDatasets();
+    onSuccess?.(payload);
+    return payload;
+  } catch (error) {
+    const normalizedError = error instanceof Error ? error : new Error("Unexpected training dataset API error.");
     onError?.(normalizedError);
     return null;
   }
