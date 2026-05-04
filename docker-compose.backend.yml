@@ -3,9 +3,13 @@ services:
     build:
       context: ./backend
     container_name: credit-card-fraud-detection-backend
+    depends_on:
+      postgres:
+        condition: service_healthy
     environment:
       APP_NAME: BTC Tensor Lab API
       CORS_ORIGINS: "http://localhost:3000"
+      DATABASE_URL: ${DATABASE_URL:-postgresql://fraud_user:fraud_password@postgres:5432/fraud_detection}
     ports:
       - "8000:8000"
     volumes:

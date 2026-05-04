@@ -14,6 +14,7 @@ class Settings:
     training_artifacts_root: str
     training_jobs_registry_path: str
     training_python_bin: str
+    database_url: str
 
 
 def _parse_cors_origins(raw_value: str) -> list[str]:
@@ -59,4 +60,8 @@ settings = Settings(
         str(DEFAULT_TRAINING_ARTIFACTS_ROOT / "jobs_registry.json"),
     ),
     training_python_bin=os.getenv("TRAINING_PYTHON_BIN", "python"),
+    database_url=os.getenv(
+        "DATABASE_URL",
+        "postgresql://fraud_user:fraud_password@postgres:5432/fraud_detection",
+    ),
 )

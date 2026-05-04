@@ -2,15 +2,19 @@
   "name": "btc-tensor-lab",
   "version": "0.1.0",
   "private": true,
-  "description": "Orquestracao local via npm para frontend e backend em containers separados",
+  "description": "Local npm orchestration for frontend, backend, and database containers",
   "scripts": {
-    "startAll": "docker compose -f docker-compose.backend.yml -f docker-compose.frontend.yml up --build",
-    "startAll:detached": "docker compose -f docker-compose.backend.yml -f docker-compose.frontend.yml up --build -d",
-    "startBack": "docker compose -f docker-compose.backend.yml up --build",
+    "start": "npm run startAll",
+    "start:detached": "npm run startAll:detached",
+    "startAll": "docker compose -f docker-compose.database.yml -f docker-compose.backend.yml -f docker-compose.frontend.yml up --build",
+    "startAll:detached": "docker compose -f docker-compose.database.yml -f docker-compose.backend.yml -f docker-compose.frontend.yml up --build -d",
+    "startBack": "docker compose -f docker-compose.database.yml -f docker-compose.backend.yml up --build",
+    "startDatabase": "docker compose -f docker-compose.database.yml up -d",
     "startFront":  "docker compose -f docker-compose.frontend.yml down && docker compose -f docker-compose.frontend.yml up --build",
-    "stop": "docker compose -f docker-compose.backend.yml -f docker-compose.frontend.yml down",
-    "restartAll": "docker compose -f docker-compose.backend.yml -f docker-compose.frontend.yml down && docker compose -f docker-compose.backend.yml -f docker-compose.frontend.yml up --build",
-    "logs": "docker compose -f docker-compose.backend.yml -f docker-compose.frontend.yml logs -f",
-    "ps": "docker compose -f docker-compose.backend.yml -f docker-compose.frontend.yml ps"
+    "stop": "docker compose -f docker-compose.database.yml -f docker-compose.backend.yml -f docker-compose.frontend.yml down",
+    "restart": "npm run restartAll",
+    "restartAll": "docker compose -f docker-compose.database.yml -f docker-compose.backend.yml -f docker-compose.frontend.yml down && docker compose -f docker-compose.database.yml -f docker-compose.backend.yml -f docker-compose.frontend.yml up --build",
+    "logs": "docker compose -f docker-compose.database.yml -f docker-compose.backend.yml -f docker-compose.frontend.yml logs -f",
+    "ps": "docker compose -f docker-compose.database.yml -f docker-compose.backend.yml -f docker-compose.frontend.yml ps"
   }
 }

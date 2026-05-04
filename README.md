@@ -7,6 +7,7 @@ The system models user transaction history as a temporal pattern and uses that c
 ## Stack
 
 - Backend: FastAPI on Python 3.14
+- Database: PostgreSQL 16
 - Frontend: HTML, CSS, and JavaScript served by Nginx
 - Orchestration: Docker Compose
 
@@ -37,7 +38,9 @@ credit-card-fraud-detection/
 │   ├── public/
 │   ├── Dockerfile
 │   └── nginx.conf
-├── docker-compose.yml
+├── docker-compose.database.yml
+├── docker-compose.backend.yml
+├── docker-compose.frontend.yml
 └── package.json
 ```
 
@@ -46,7 +49,7 @@ credit-card-fraud-detection/
 From the repository root:
 
 ```bash
-docker compose up --build
+npm run startAll
 ```
 
 You can also use the npm shortcuts:
@@ -57,10 +60,15 @@ npm start
 
 Available scripts:
 
-- `npm start`: starts both containers with a fresh build
-- `npm run start:detached`: starts the stack in the background
+- `npm start`: starts PostgreSQL, backend, and frontend with a fresh build
+- `npm run start:detached`: starts the full stack in the background
+- `npm run startAll`: explicit alias for `npm start`
+- `npm run startAll:detached`: explicit alias for `npm run start:detached`
+- `npm run startBack`: starts PostgreSQL and backend
+- `npm run startDatabase`: starts only PostgreSQL in the background
 - `npm run stop`: stops the stack
 - `npm run restart`: stops the stack and rebuilds it
+- `npm run restartAll`: explicit alias for `npm run restart`
 - `npm run logs`: streams container logs
 - `npm run ps`: shows the current container status
 
@@ -68,6 +76,7 @@ Available scripts:
 
 - Frontend: http://localhost:3000
 - Backend root: http://localhost:8000
+- PostgreSQL: localhost:5432
 - Health check: http://localhost:8000/api/health
 - API health: http://localhost:8000/api/v1/health
 - Prediction: `POST http://localhost:8000/api/v1/predict`
