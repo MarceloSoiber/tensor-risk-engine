@@ -1,6 +1,6 @@
 export function createAppContext() {
   return {
-    appName: "Fraud Detection Lab",
+    appName: "Credit Card Fraud Detection",
     tagline: "A modular front office for risk, fraud, and model monitoring workflows.",
   };
 }

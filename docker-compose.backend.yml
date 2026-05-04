@@ -7,7 +7,7 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      APP_NAME: BTC Tensor Lab API
+      APP_NAME: Credit Card Fraud Detection API
       CORS_ORIGINS: "http://localhost:3000"
       DATABASE_URL: ${DATABASE_URL:-postgresql://fraud_user:fraud_password@postgres:5432/fraud_detection}
     ports:

@@ -1,5 +1,5 @@
 {
-  "name": "btc-tensor-lab",
+  "name": "credit-card-fraud-detection",
   "version": "0.1.0",
   "private": true,
   "description": "Local npm orchestration for frontend, backend, and database containers",
