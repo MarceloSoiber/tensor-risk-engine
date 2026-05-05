@@ -10,6 +10,8 @@
     "startAll:detached": "docker compose -f docker-compose.database.yml -f docker-compose.backend.yml -f docker-compose.frontend.yml up --build -d",
     "startBack": "docker compose -f docker-compose.database.yml -f docker-compose.backend.yml up --build",
     "startDatabase": "docker compose -f docker-compose.database.yml up -d",
+    "migrate:database": "bash backend/scripts/run_migrations.sh",
+    "migrate:database:down": "bash backend/scripts/run_migrations.sh down",
     "startFront":  "docker compose -f docker-compose.frontend.yml down && docker compose -f docker-compose.frontend.yml up --build",
     "stop": "docker compose -f docker-compose.database.yml -f docker-compose.backend.yml -f docker-compose.frontend.yml down",
     "restart": "npm run restartAll",

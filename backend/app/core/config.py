@@ -62,6 +62,6 @@ settings = Settings(
     training_python_bin=os.getenv("TRAINING_PYTHON_BIN", "python"),
     database_url=os.getenv(
         "DATABASE_URL",
-        "postgresql://fraud_user:fraud_password@postgres:5432/fraud_detection",
+        "postgresql://fraud_user:fraud_password@localhost:5432/fraud_detection",
     ),
 )

@@ -1,10 +1,11 @@
 from fastapi import APIRouter, HTTPException, status
 
+from app.core.config import settings
 from app.domain.transaction import Transaction
 from app.features.feature_builder import FeatureBuilder
 from app.ml.inference.risk_engine import RiskInferenceEngine
 from app.ml.loaders.model_loader import ModelLoader
-from app.repositories.transaction_repository import InMemoryTransactionRepository
+from app.repositories.transaction_repository import PostgresTransactionRepository, TransactionPersistenceError
 from app.schemas.request import PredictRequest
 from app.schemas.response import PredictResponse
 from app.services.risk_service import RiskService
@@ -14,7 +15,7 @@ router = APIRouter(prefix="/v1", tags=["prediction"])
 model_loader = ModelLoader()
 
 risk_service = RiskService(
-    repository=InMemoryTransactionRepository(),
+    repository=PostgresTransactionRepository(settings.database_url),
     feature_builder=FeatureBuilder(),
     inference_engine=RiskInferenceEngine(model_loader=model_loader),
     model_loader=model_loader,
@@ -53,6 +54,11 @@ async def predict(payload: PredictRequest) -> PredictResponse:
         )
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+    except TransactionPersistenceError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Transaction analysis could not be persisted.",
+        ) from exc
 
     return PredictResponse(
         risk_score=risk_score.value,

@@ -22,8 +22,6 @@ class RiskService:
         self._model_loader = model_loader
 
     def evaluate(self, transaction: Transaction, training_job_id: str | None = None) -> tuple[RiskScore, Decision, str]:
-        self._repository.save(transaction)
-
         features = self._feature_builder.build(transaction)
         selected_model = self._resolve_selected_model(training_job_id)
         score_value = self._inference_engine.predict(features, model_artifacts=selected_model)
@@ -32,6 +30,7 @@ class RiskService:
         decision_threshold = selected_model.decision_threshold if selected_model is not None else self._model_loader.load_decision_threshold()
         decision = self._make_decision(score_value, decision_threshold)
         model_version = selected_model.model_version if selected_model is not None else self._model_loader.load_model_version()
+        self._repository.save_analysis(transaction, risk_score, decision, model_version)
 
         return risk_score, decision, model_version
 
