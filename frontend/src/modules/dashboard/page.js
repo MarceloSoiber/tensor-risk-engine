@@ -1,5 +1,3 @@
-import { createApiCheckForm } from "../../components/forms/api-check-form.js";
-import { createHealthCard } from "../../components/charts/health-card.js";
 import { createElement } from "../../utils/dom.js";
 
 export function createDashboardPage(context) {
@@ -34,20 +32,7 @@ export function createDashboardPage(context) {
     createAlertList(),
   );
 
-  const analyzerPanel = createElement("article", { className: "panel dashboard-analyzer" });
-  const healthCard = createHealthCard({
-    title: "Backend health",
-    description: "Run the health check to validate the API connection.",
-  });
-
-  analyzerPanel.append(
-    createElement("span", { className: "panel__eyebrow", text: "Fraud analyzer" }),
-    createElement("h3", { className: "panel__title", text: "Form and result" }),
-    createApiCheckForm({ onStateChange: healthCard.update }),
-    healthCard.element,
-  );
-
-  page.append(kpis, chartPanel, tablePanel, alertsPanel, analyzerPanel);
+  page.append(kpis, chartPanel, tablePanel, alertsPanel);
   return page;
 }
 
