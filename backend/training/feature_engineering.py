@@ -100,8 +100,12 @@ def _causal_behavior_features_for_group(
     group_df: pd.DataFrame,
     time_col: str,
     amount_col: str,
+    entity_col: str,
+    entity_value: object,
 ) -> pd.DataFrame:
     group = group_df.sort_values(time_col).copy()
+    if entity_col not in group.columns:
+        group[entity_col] = entity_value
     times = group[time_col].to_numpy()
     amounts = group[amount_col].to_numpy(dtype=np.float64)
 
@@ -176,7 +180,15 @@ def append_causal_behavior_features(
     """Adds strictly causal behavior features grouped by entity."""
     out = (
         df.groupby(entity_col, group_keys=False, sort=False)
-        .apply(lambda g: _causal_behavior_features_for_group(g, time_col, amount_col))
+        .apply(
+            lambda g: _causal_behavior_features_for_group(
+                g,
+                time_col,
+                amount_col,
+                entity_col=entity_col,
+                entity_value=g.name,
+            )
+        )
         .reset_index(drop=True)
     )
     return out

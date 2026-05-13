@@ -8,7 +8,8 @@ const ROUTE_DEFINITIONS = [
   { hash: "#/dashboard", label: "Dashboard", render: createDashboardPage },
   { hash: "#/auth", label: "Auth", render: createAuthPage, sidebar: false },
   { hash: "#/transactions", label: "Transactions", render: createTransactionsPage },
-  { hash: "#/fraud", label: "Fraud", render: createFraudPage },
+  { hash: "#/ai-analysis", label: "AI Analysis", render: createFraudPage },
+  { hash: "#/fraud", label: "AI Analysis", render: createFraudPage, sidebar: false },
   { hash: "#/model-training", label: "Model training", render: createModelMonitoringPage },
 ];
 

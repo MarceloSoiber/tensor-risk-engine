@@ -40,6 +40,8 @@ def test_core_routes_are_registered() -> None:
     assert ("/api/v1/predict", ("POST",)) in routes
     assert ("/api/v1/dashboard/overview", ("GET",)) in routes
     assert ("/api/v1/transactions", ("GET",)) in routes
+    assert ("/api/v1/ai-analysis/query", ("POST",)) in routes
+    assert ("/api/v1/ai-analysis/history", ("GET",)) in routes
 
 
 def test_root_returns_backend_online() -> None:

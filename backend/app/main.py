@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.controllers.v1.ai_analysis_controller import router as ai_analysis_router
 from app.controllers.v1.dashboard_controller import router as dashboard_router
 from app.controllers.v1.predict_controller import router as predict_router
 from app.controllers.v1.training_controller import router as training_router
@@ -21,6 +22,7 @@ app.include_router(predict_router, prefix="/api")
 app.include_router(training_router, prefix="/api")
 app.include_router(dashboard_router, prefix="/api")
 app.include_router(transactions_router, prefix="/api")
+app.include_router(ai_analysis_router, prefix="/api")
 
 
 @app.get("/")

@@ -15,6 +15,10 @@ class Settings:
     training_jobs_registry_path: str
     training_python_bin: str
     database_url: str
+    local_llm_base_url: str
+    local_llm_model: str
+    local_llm_api_key: str
+    ai_analysis_max_transactions: int
 
 
 def _parse_cors_origins(raw_value: str) -> list[str]:
@@ -31,6 +35,17 @@ def _parse_float_env(name: str, default: float) -> float:
     except ValueError:
         return default
     return max(0.0, min(1.0, value))
+
+
+def _parse_int_env(name: str, default: int, *, minimum: int, maximum: int) -> int:
+    raw_value = os.getenv(name)
+    if raw_value is None:
+        return default
+    try:
+        value = int(raw_value)
+    except ValueError:
+        return default
+    return max(minimum, min(maximum, value))
 
 
 BACKEND_ROOT = Path(__file__).resolve().parents[2]
@@ -64,4 +79,8 @@ settings = Settings(
         "DATABASE_URL",
         "postgresql://fraud_user:fraud_password@localhost:5432/fraud_detection",
     ),
+    local_llm_base_url=os.getenv("LOCAL_LLM_BASE_URL", "http://localhost:1234/api/v1/chat"),
+    local_llm_model=os.getenv("LOCAL_LLM_MODEL", "openai/gpt-oss-20b"),
+    local_llm_api_key=os.getenv("LOCAL_LLM_API_KEY", "lm-studio"),
+    ai_analysis_max_transactions=_parse_int_env("AI_ANALYSIS_MAX_TRANSACTIONS", 25, minimum=1, maximum=200),
 )
