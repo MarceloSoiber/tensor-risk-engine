@@ -1,0 +1,21 @@
+{
+  "name": "credit-card-fraud-detection",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local npm orchestration for frontend, backend, and database containers",
+  "scripts": {
+    "start": "docker compose -f docker-compose.database.yml -f docker-compose.backend.yml -f docker-compose.frontend.yml up --build",
+    "start:detached": "docker compose -f docker-compose.database.yml -f docker-compose.backend.yml -f docker-compose.frontend.yml up --build -d",
+    "startBack": "docker compose -f docker-compose.database.yml -f docker-compose.backend.yml up --build",
+    "startDatabase": "docker compose -f docker-compose.database.yml up -d",
+    "startFront":  "docker compose -f docker-compose.frontend.yml down && docker compose -f docker-compose.frontend.yml up --build",
+    "stop": "docker compose -f docker-compose.database.yml -f docker-compose.backend.yml -f docker-compose.frontend.yml down",
+    "restart": "docker compose -f docker-compose.database.yml -f docker-compose.backend.yml -f docker-compose.frontend.yml down && docker compose -f docker-compose.database.yml -f docker-compose.backend.yml -f docker-compose.frontend.yml up --build",
+    "clean:database": "bash backend/scripts/clean_database.sh",
+    "langgraph:serve": "bash backend/scripts/run_langgraph.sh",
+    "migrate:database": "bash backend/scripts/run_migrations.sh",
+    "migrate:database:down": "bash backend/scripts/run_migrations.sh down",
+    "logs": "docker compose -f docker-compose.database.yml -f docker-compose.backend.yml -f docker-compose.frontend.yml logs -f",
+    "ps": "docker compose -f docker-compose.database.yml -f docker-compose.backend.yml -f docker-compose.frontend.yml ps"
+  }
+}

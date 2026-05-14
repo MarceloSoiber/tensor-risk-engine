@@ -1,0 +1,7 @@
+{
+  "$schema": "https://langgra.ph/schema.json",
+  "dependencies": ["./backend"],
+  "graphs": {
+    "fraud_analysis": "./backend/app/langgraph/fraud_analysis_graph.py:graph"
+  }
+}

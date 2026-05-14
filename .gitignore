@@ -1,0 +1,23 @@
+venv/
+__pycache__/
+.env
+*.pyc
+*.pyo   
+.venv/
+.idea/  
+.pytest_cache/
+.DS_Store
+data/
+logs/
+backend/training/artifacts/
+.agents/
+.vscode/
+.specify/
+AGENTS.md
+.codex
+tensor-risk-engine-roadmap.md
+# Added by code-review-graph
+.code-review-graph/
+
+# LangGraph API
+.langgraph_api

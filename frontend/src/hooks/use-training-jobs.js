@@ -1,0 +1,58 @@
+import {
+  deleteTrainingJob,
+  listTrainingDatasets,
+  listTrainingJobs,
+  startTrainingJob,
+} from "../services/trainingService.js";
+
+export async function useTrainingJobs({ onPending, onSuccess, onError } = {}) {
+  try {
+    onPending?.();
+    const payload = await listTrainingJobs();
+    onSuccess?.(payload);
+    return payload;
+  } catch (error) {
+    const normalizedError = error instanceof Error ? error : new Error("Unexpected training API error.");
+    onError?.(normalizedError);
+    return null;
+  }
+}
+
+export async function useStartTrainingJob({ payload, onPending, onSuccess, onError } = {}) {
+  try {
+    onPending?.();
+    const response = await startTrainingJob(payload);
+    onSuccess?.(response);
+    return response;
+  } catch (error) {
+    const normalizedError = error instanceof Error ? error : new Error("Unexpected training API error.");
+    onError?.(normalizedError);
+    return null;
+  }
+}
+
+export async function useTrainingDatasets({ onPending, onSuccess, onError } = {}) {
+  try {
+    onPending?.();
+    const payload = await listTrainingDatasets();
+    onSuccess?.(payload);
+    return payload;
+  } catch (error) {
+    const normalizedError = error instanceof Error ? error : new Error("Unexpected training dataset API error.");
+    onError?.(normalizedError);
+    return null;
+  }
+}
+
+export async function useDeleteTrainingJob({ jobId, onPending, onSuccess, onError } = {}) {
+  try {
+    onPending?.();
+    await deleteTrainingJob(jobId);
+    onSuccess?.();
+    return true;
+  } catch (error) {
+    const normalizedError = error instanceof Error ? error : new Error("Unexpected training API error.");
+    onError?.(normalizedError);
+    return false;
+  }
+}

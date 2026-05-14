@@ -1,0 +1,29 @@
+services:
+  backend:
+    build:
+      context: ./backend
+    container_name: credit-card-fraud-detection-backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      APP_NAME: Credit Card Fraud Detection API
+      CORS_ORIGINS: "http://localhost:3000"
+      DATABASE_URL: ${DATABASE_URL:-postgresql://fraud_user:fraud_password@postgres:5432/fraud_detection}
+      LOCAL_LLM_BASE_URL: ${LOCAL_LLM_BASE_URL:-http://host.docker.internal:1234/api/v1/chat}
+      LOCAL_LLM_MODEL: ${LOCAL_LLM_MODEL:-openai/gpt-oss-20b}
+      LOCAL_LLM_API_KEY: ${LOCAL_LLM_API_KEY:-lm-studio}
+      OPENROUTER_BASE_URL: ${OPENROUTER_BASE_URL:-https://openrouter.ai/api/v1/chat/completions}
+      OPENROUTER_MODEL: ${OPENROUTER_MODEL:-}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      AI_ANALYSIS_MAX_TRANSACTIONS: ${AI_ANALYSIS_MAX_TRANSACTIONS:-25}
+      LANGSMITH_TRACING: ${LANGSMITH_TRACING:-false}
+      LANGSMITH_API_KEY: ${LANGSMITH_API_KEY:-}
+      LANGSMITH_PROJECT: ${LANGSMITH_PROJECT:-credit-card-fraud-detection}
+      LANGSMITH_ENDPOINT: ${LANGSMITH_ENDPOINT:-https://api.smith.langchain.com}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
