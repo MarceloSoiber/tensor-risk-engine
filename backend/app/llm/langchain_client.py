@@ -164,6 +164,8 @@ class OpenRouterLlmClient:
                 "Authorization": f"Bearer {self._api_key}",
                 "Content-Type": "application/json",
                 "Accept": "application/json",
+                "HTTP-Referer": "http://localhost:3000",
+                "X-Title": settings.app_name,
             },
             method="POST",
         )

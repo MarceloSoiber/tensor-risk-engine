@@ -110,6 +110,8 @@ def test_openrouter_chat_endpoint_returns_choice_content(monkeypatch) -> None:
     assert captured["url"] == "https://openrouter.ai/api/v1/chat/completions"
     assert captured["timeout"] == 900
     assert captured["headers"]["Authorization"] == "Bearer secret-key"
+    assert captured["headers"]["Http-referer"] == "http://localhost:3000"
+    assert captured["headers"]["X-title"] == "Credit Card Fraud Detection API"
     assert captured["payload"] == {
         "model": "provider/model",
         "messages": [

@@ -159,3 +159,28 @@ def test_ai_analysis_llm_client_uses_openrouter_when_configured(monkeypatch: pyt
 
     assert isinstance(llm_client, OpenRouterLlmClient)
     assert model == "provider/model"
+
+
+def test_ai_analysis_observability_reports_openrouter_provider(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        ai_analysis_controller,
+        "settings",
+        replace(
+            ai_analysis_controller.settings,
+            openrouter_api_key="secret-key",
+            openrouter_model="provider/model",
+            langsmith_tracing=True,
+            langsmith_api_key="langsmith-key",
+        ),
+    )
+
+    response = client.get("/api/v1/ai-analysis/observability")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["tracing_enabled"] is True
+    assert body["traceable_provider"] is False
+    assert "OpenRouter is configured" in body["provider_note"]

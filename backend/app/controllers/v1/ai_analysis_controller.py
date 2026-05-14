@@ -70,12 +70,16 @@ def query_ai_analysis(payload: AiAnalysisQueryRequest) -> AiAnalysisResponse:
 
 @router.get("/observability", response_model=AiAnalysisObservabilityResponse)
 def get_ai_analysis_observability() -> AiAnalysisObservabilityResponse:
-    traceable_provider = not settings.local_llm_base_url.rstrip("/").endswith("/api/v1/chat")
-    provider_note = (
-        "LangSmith traces are emitted for LangChain ChatOpenAI compatible providers."
-        if traceable_provider
-        else "Current LM Studio /api/v1/chat mode is preserved for the frontend but is not traced by LangSmith."
-    )
+    if settings.openrouter_api_key and settings.openrouter_model:
+        traceable_provider = False
+        provider_note = "OpenRouter is configured through direct HTTP chat completions; LangSmith traces are not emitted for this provider."
+    else:
+        traceable_provider = not settings.local_llm_base_url.rstrip("/").endswith("/api/v1/chat")
+        provider_note = (
+            "LangSmith traces are emitted for LangChain ChatOpenAI compatible providers."
+            if traceable_provider
+            else "Current LM Studio /api/v1/chat mode is preserved for the frontend but is not traced by LangSmith."
+        )
     return AiAnalysisObservabilityResponse(
         tracing_enabled=settings.langsmith_tracing and bool(settings.langsmith_api_key),
         project=settings.langsmith_project,
