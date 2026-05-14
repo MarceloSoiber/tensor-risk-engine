@@ -223,6 +223,10 @@ a {
 }
 
 .dashboard-screen {
+  --dashboard-kpi-width: 266px;
+  --dashboard-kpi-height: 154px;
+  --dashboard-panel-height: 330px;
+  --dashboard-table-height: 440px;
   display: grid;
   gap: 18px;
   min-width: 0;
@@ -343,17 +347,59 @@ a {
 .dashboard-kpis {
   grid-column: 1 / -1;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(4, var(--dashboard-kpi-width));
+  grid-auto-columns: var(--dashboard-kpi-width);
+  grid-auto-flow: column;
+  gap: 16px;
+  width: max-content;
+  max-width: 100%;
+  margin-inline: auto;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-inline: contain;
+  scroll-snap-type: x proximity;
+  padding: 2px 2px 8px;
+  scrollbar-color: rgba(103, 232, 249, 0.5) rgba(255, 255, 255, 0.05);
+  scrollbar-width: thin;
 }
 
 .metric-card {
+  position: relative;
   display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   gap: 6px;
-  padding: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 22px;
-  background: rgba(255, 255, 255, 0.03);
+  width: var(--dashboard-kpi-width);
+  height: var(--dashboard-kpi-height);
+  min-width: var(--dashboard-kpi-width);
+  scroll-snap-align: start;
+  padding: 18px 18px 16px;
+  border: 1px solid rgba(103, 232, 249, 0.12);
+  border-radius: 20px;
+  background:
+    linear-gradient(135deg, rgba(103, 232, 249, 0.12), transparent 48%),
+    linear-gradient(180deg, rgba(22, 35, 57, 0.92), rgba(13, 23, 39, 0.94));
+  box-shadow: 0 18px 36px rgba(1, 7, 20, 0.26);
+  overflow: hidden;
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.metric-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  background: linear-gradient(90deg, var(--accent-strong), rgba(52, 211, 153, 0.85), transparent);
+  opacity: 0.85;
+}
+
+.metric-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(103, 232, 249, 0.28);
+  box-shadow: 0 22px 42px rgba(1, 7, 20, 0.34);
 }
 
 .metric-card__title {
@@ -364,12 +410,20 @@ a {
 }
 
 .metric-card__value {
-  font-size: clamp(1.35rem, 2vw, 2rem);
+  align-self: center;
+  color: var(--text);
+  font-size: 1.85rem;
+  line-height: 1;
+  letter-spacing: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .metric-card__detail {
-  color: var(--muted);
+  color: #9cccf5;
   line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .dashboard-chart {
@@ -382,12 +436,14 @@ a {
   display: grid;
   gap: 14px;
   min-width: 0;
+  height: var(--dashboard-table-height);
 }
 
 .dashboard-alerts {
   display: grid;
   gap: 14px;
   min-width: 0;
+  height: var(--dashboard-panel-height);
 }
 
 .dashboard-analyzer {
@@ -1405,12 +1461,22 @@ a {
 
 .dashboard-panel {
   display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
   gap: 14px;
   min-width: 0;
+  height: var(--dashboard-panel-height);
+  overflow: hidden;
+}
+
+.dashboard-panel > :not(.panel__eyebrow):not(.panel__title) {
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
 }
 
 .analytics-chart {
-  min-height: 240px;
+  min-height: 0;
+  height: 100%;
   display: grid;
   grid-template-columns: repeat(14, minmax(18px, 1fr));
   align-items: end;
@@ -1462,6 +1528,7 @@ a {
 
 .analytics-list {
   display: grid;
+  align-content: start;
   gap: 10px;
 }
 
@@ -1494,7 +1561,8 @@ a {
 }
 
 .hourly-chart {
-  min-height: 220px;
+  min-height: 0;
+  height: 100%;
   display: grid;
   grid-template-columns: repeat(24, minmax(4px, 1fr));
   align-items: end;
@@ -1512,6 +1580,7 @@ a {
 }
 
 .data-table--dashboard .data-table__row {
+  min-width: 660px;
   grid-template-columns: minmax(160px, 1.4fr) minmax(120px, 1fr) minmax(90px, 0.7fr) minmax(96px, 0.8fr) minmax(70px, 0.6fr);
 }
 
@@ -1627,7 +1696,7 @@ a {
   }
 
   .dashboard-kpis {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(4, var(--dashboard-kpi-width));
   }
 
   .monitoring-layout {
@@ -1726,7 +1795,8 @@ a {
   }
 
   .dashboard-kpis {
-    grid-template-columns: 1fr;
+    --dashboard-kpi-width: min(266px, calc(100vw - 72px));
+    grid-template-columns: repeat(4, var(--dashboard-kpi-width));
   }
 
   .data-table__row {
