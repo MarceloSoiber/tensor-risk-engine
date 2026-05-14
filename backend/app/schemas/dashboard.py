@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -81,3 +82,28 @@ class TransactionListResponse(BaseModel):
     limit: int = Field(..., ge=1)
     offset: int = Field(..., ge=0)
     transactions: list[TransactionListItem]
+
+
+TransactionImportJobStatus = Literal["queued", "running", "succeeded", "failed"]
+
+
+class FraudTestImportRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    batch_size: int = Field(default=1000, ge=1, le=10_000)
+    training_job_id: str | None = Field(default=None, min_length=1, max_length=128)
+
+
+class TransactionImportJobResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    job_id: str
+    status: TransactionImportJobStatus
+    dataset_path: str
+    processed_rows: int = Field(..., ge=0)
+    imported_rows: int = Field(..., ge=0)
+    analyzed_rows: int = Field(..., ge=0)
+    error: str | None = None
+    created_at: datetime
+    updated_at: datetime
+    finished_at: datetime | None = None

@@ -1,6 +1,6 @@
 import { requestJson } from "./api.js";
 
-export function fetchDashboardOverview({ days = 30, limit = 50 } = {}) {
+export function fetchDashboardOverview({ days = 3650, limit = 50 } = {}) {
   const params = new URLSearchParams({
     days: String(days),
     limit: String(limit),

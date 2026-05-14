@@ -5,7 +5,7 @@ export function createDashboardPage() {
   const page = createElement("section", { className: "dashboard-screen dashboard-screen--overview" });
   page.append(createDashboardState("Loading dashboard analytics..."));
 
-  fetchDashboardOverview({ days: 30, limit: 50 })
+  fetchDashboardOverview({ days: 3650, limit: 50 })
     .then((overview) => {
       page.replaceChildren(createDashboardContent(overview));
     })

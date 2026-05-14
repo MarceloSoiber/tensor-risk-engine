@@ -14,15 +14,16 @@ class SequenceTrainingConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     backbone: Literal["gru", "lstm"] = "gru"
-    seq_len: int = Field(default=30, ge=5, le=512)
-    stride: int = Field(default=1, ge=1, le=64)
-    batch_size: int = Field(default=256, ge=8, le=4096)
-    epochs: int = Field(default=20, ge=1, le=300)
+    seq_len: int = Field(default=20, ge=5, le=512)
+    stride: int = Field(default=10, ge=1, le=256)
+    batch_size: int = Field(default=128, ge=8, le=4096)
+    epochs: int = Field(default=5, ge=1, le=300)
     lr: float = Field(default=1e-3, gt=0.0, le=1.0)
-    patience: int = Field(default=5, ge=1, le=50)
-    hidden_size: int = Field(default=128, ge=16, le=2048)
-    num_layers: int = Field(default=2, ge=1, le=8)
+    patience: int = Field(default=3, ge=1, le=50)
+    hidden_size: int = Field(default=64, ge=16, le=2048)
+    num_layers: int = Field(default=1, ge=1, le=8)
     dropout: float = Field(default=0.2, ge=0.0, lt=1.0)
+    max_windows_per_split: int = Field(default=50_000, ge=1_000, le=1_000_000)
 
 
 class TrainingJobStartRequest(BaseModel):

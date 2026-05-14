@@ -1,5 +1,10 @@
 import { createButton } from "../../components/ui/button.js";
-import { fetchAiAnalysisHistory, queryAiAnalysis } from "../../services/aiAnalysisService.js";
+import {
+  deleteAiAnalysisHistoryItem,
+  fetchAiAnalysisHistory,
+  fetchAiAnalysisObservability,
+  queryAiAnalysis,
+} from "../../services/aiAnalysisService.js";
 import { createElement } from "../../utils/dom.js";
 
 const CATEGORY_OPTIONS = [
@@ -68,6 +73,10 @@ function createQueryPanel({ onResult }) {
     "Which patterns in this filtered transaction set deserve analyst attention?",
   );
   const status = createElement("div", { className: "ai-query__status", text: "Ready to analyze local transaction context." });
+  const observability = createElement("div", {
+    className: "ai-observability",
+    text: "Loading LangSmith observability...",
+  });
 
   const submitButton = createButton({
     label: "Run AI analysis",
@@ -89,11 +98,41 @@ function createQueryPanel({ onResult }) {
     }),
     question.wrapper,
     createElement("div", { className: "ai-query__actions", children: [submitButton] }),
+    observability,
     status,
   );
 
   panel.append(form);
+  hydrateAiObservability(observability);
   return panel;
+}
+
+async function hydrateAiObservability(container) {
+  try {
+    const payload = await fetchAiAnalysisObservability();
+    const statusText = payload.tracing_enabled
+      ? `LangSmith tracing enabled · ${payload.project}`
+      : "LangSmith tracing disabled";
+    const link = createElement("a", {
+      className: "ai-observability__link",
+      text: "Open LangSmith",
+      attrs: {
+        href: payload.dashboard_url,
+        target: "_blank",
+        rel: "noreferrer",
+      },
+    });
+    container.replaceChildren(
+      createElement("span", { text: statusText }),
+      link,
+      createElement("small", { text: payload.provider_note }),
+    );
+    container.classList.toggle("ai-observability--enabled", Boolean(payload.tracing_enabled));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unable to load LangSmith status.";
+    container.textContent = message;
+    container.classList.add("ai-observability--error");
+  }
 }
 
 function createResultPanel() {
@@ -129,6 +168,7 @@ function createResultPanel() {
 function createHistoryPanel({ onSelect }) {
   const element = createElement("article", { className: "panel ai-history-panel" });
   const list = createElement("div", { className: "ai-history" });
+  const status = createElement("div", { className: "ai-history-panel__status", text: "" });
   const reloadButton = createButton({
     label: "Reload history",
     variant: "secondary",
@@ -148,11 +188,13 @@ function createHistoryPanel({ onSelect }) {
         reloadButton,
       ],
     }),
+    status,
     list,
   );
 
   async function load() {
     reloadButton.disabled = true;
+    status.textContent = "";
     list.replaceChildren(createElement("article", { className: "alert-item", text: "Loading saved analyses..." }));
     try {
       const payload = await fetchAiAnalysisHistory({ limit: 20, offset: 0 });
@@ -161,12 +203,37 @@ function createHistoryPanel({ onSelect }) {
         list.replaceChildren(createElement("article", { className: "alert-item", text: "No saved analyses yet." }));
         return;
       }
-      list.replaceChildren(...analyses.map((item) => createHistoryItem(item, onSelect)));
+      list.replaceChildren(...analyses.map((item) => createHistoryItem(item, { onSelect, onRemove: remove })));
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unexpected history loading error.";
       list.replaceChildren(createElement("article", { className: "alert-item alert-item--error", text: message }));
     } finally {
       reloadButton.disabled = false;
+    }
+  }
+
+  async function remove(item, button) {
+    const analysisId = item.analysis_id;
+    if (!analysisId) {
+      status.textContent = "Saved analysis id is missing.";
+      status.className = "ai-history-panel__status ai-history-panel__status--error";
+      return;
+    }
+
+    button.disabled = true;
+    status.textContent = `Removing analysis #${analysisId}...`;
+    status.className = "ai-history-panel__status";
+
+    try {
+      await deleteAiAnalysisHistoryItem(analysisId);
+      await load();
+      status.textContent = `Analysis #${analysisId} removed.`;
+      status.className = "ai-history-panel__status ai-history-panel__status--success";
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unexpected history removal error.";
+      status.textContent = message;
+      status.className = "ai-history-panel__status ai-history-panel__status--error";
+      button.disabled = false;
     }
   }
 
@@ -300,20 +367,32 @@ function createTransactionContext(transactions) {
   return table;
 }
 
-function createHistoryItem(item, onSelect) {
-  const button = createElement("button", {
-    className: "ai-history__item",
+function createHistoryItem(item, { onSelect, onRemove }) {
+  const article = createElement("article", { className: "ai-history__item" });
+  const selectButton = createElement("button", {
+    className: "ai-history__select",
     attrs: { type: "button" },
   });
-  button.append(
+  const removeButton = createButton({
+    label: "Remove",
+    variant: "secondary",
+    onClick: async (event) => {
+      event.stopPropagation();
+      await onRemove(item, removeButton);
+    },
+  });
+  removeButton.classList.add("ai-history__remove");
+
+  selectButton.append(
     createElement("span", { className: "ai-history__question", text: item.question }),
     createElement("span", {
       className: "ai-history__meta",
       text: `${formatNumber(item.data_summary?.transaction_count)} transactions | ${formatShortDateTime(item.created_at)}`,
     }),
   );
-  button.addEventListener("click", () => onSelect(item));
-  return button;
+  selectButton.addEventListener("click", () => onSelect(item));
+  article.append(selectButton, removeButton);
+  return article;
 }
 
 function createSelectField(label, name, options) {

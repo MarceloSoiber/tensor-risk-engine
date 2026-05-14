@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from io import BytesIO
 
-from app.llm.langchain_client import LangChainLocalLlmClient
+from app.llm.langchain_client import LangChainLocalLlmClient, OpenRouterLlmClient
 
 
 class FakeHttpResponse:
@@ -40,7 +40,7 @@ def test_lm_studio_chat_endpoint_returns_output(monkeypatch) -> None:
 
     assert response == '{"answer":"ok","insights":[],"recommended_actions":[]}'
     assert captured["url"] == "http://localhost:1234/api/v1/chat"
-    assert captured["timeout"] == 120
+    assert captured["timeout"] == 900
     assert captured["payload"] == {
         "model": "openai/gpt-oss-20b",
         "system_prompt": (
@@ -75,3 +75,53 @@ def test_lm_studio_chat_endpoint_extracts_message_output(monkeypatch) -> None:
     response = client.generate("Analyze this")
 
     assert response == '<|channel|>final <|constrain|>JSON<|message|>{"answer":"blue","insights":[],"recommended_actions":[]}'
+
+
+def test_openrouter_chat_endpoint_returns_choice_content(monkeypatch) -> None:
+    captured: dict[str, object] = {}
+
+    def fake_urlopen(request, timeout):  # noqa: ANN001, ANN202
+        captured["url"] = request.full_url
+        captured["timeout"] = timeout
+        captured["headers"] = dict(request.header_items())
+        captured["payload"] = json.loads(request.data.decode("utf-8"))
+        return FakeHttpResponse(
+            {
+                "choices": [
+                    {
+                        "message": {
+                            "content": '{"answer":"ok","insights":[],"recommended_actions":[]}',
+                        }
+                    }
+                ]
+            }
+        )
+
+    monkeypatch.setattr("app.llm.langchain_client.urlopen", fake_urlopen)
+    client = OpenRouterLlmClient(
+        base_url="https://openrouter.ai/api/v1/chat/completions",
+        model="provider/model",
+        api_key="secret-key",
+    )
+
+    response = client.generate("Analyze this")
+
+    assert response == '{"answer":"ok","insights":[],"recommended_actions":[]}'
+    assert captured["url"] == "https://openrouter.ai/api/v1/chat/completions"
+    assert captured["timeout"] == 900
+    assert captured["headers"]["Authorization"] == "Bearer secret-key"
+    assert captured["payload"] == {
+        "model": "provider/model",
+        "messages": [
+            {
+                "role": "system",
+                "content": (
+                    "You are an AI assistant supporting fraud analysts. "
+                    "Return only the strict JSON requested by the user prompt."
+                ),
+            },
+            {"role": "user", "content": "Analyze this"},
+        ],
+        "temperature": 0.1,
+        "response_format": {"type": "json_object"},
+    }

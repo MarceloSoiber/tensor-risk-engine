@@ -1,9 +1,18 @@
 from __future__ import annotations
 
 import json
+import os
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 from typing import Protocol
+
+from app.core.config import settings
+
+AI_ANALYSIS_SYSTEM_PROMPT = (
+    "You are an AI assistant supporting fraud analysts. "
+    "Return only the strict JSON requested by the user prompt."
+)
+AI_ANALYSIS_REQUEST_TIMEOUT_SECONDS = 900
 
 
 class AiAnalysisProviderError(RuntimeError):
@@ -39,6 +48,7 @@ class LangChainLocalLlmClient:
             raise AiAnalysisProviderError("LangChain OpenAI integration is not installed.") from exc
 
         try:
+            configure_langsmith_tracing_environment()
             llm = ChatOpenAI(
                 base_url=self._base_url,
                 api_key=self._api_key,
@@ -57,10 +67,7 @@ class LangChainLocalLlmClient:
     def _generate_with_lm_studio_chat(self, prompt: str) -> str:
         payload = {
             "model": self._model,
-            "system_prompt": (
-                "You are an AI assistant supporting fraud analysts. "
-                "Return only the strict JSON requested by the user prompt."
-            ),
+            "system_prompt": AI_ANALYSIS_SYSTEM_PROMPT,
             "input": prompt,
         }
         request = Request(
@@ -71,7 +78,7 @@ class LangChainLocalLlmClient:
         )
 
         try:
-            with urlopen(request, timeout=120) as response:  # noqa: S310
+            with urlopen(request, timeout=AI_ANALYSIS_REQUEST_TIMEOUT_SECONDS) as response:  # noqa: S310
                 raw_body = response.read().decode("utf-8")
         except (HTTPError, URLError, TimeoutError) as exc:
             raise AiAnalysisProviderError("Local LLM analysis is unavailable.") from exc
@@ -110,5 +117,81 @@ class LangChainLocalLlmClient:
                     return choice_message["content"]
                 if isinstance(first_choice.get("text"), str):
                     return first_choice["text"]
+
+        return raw_body
+
+
+def configure_langsmith_tracing_environment() -> None:
+    if not settings.langsmith_tracing:
+        return
+
+    os.environ.setdefault("LANGSMITH_TRACING", "true")
+    os.environ.setdefault("LANGCHAIN_TRACING_V2", "true")
+    os.environ.setdefault("LANGSMITH_PROJECT", settings.langsmith_project)
+    os.environ.setdefault("LANGCHAIN_PROJECT", settings.langsmith_project)
+    os.environ.setdefault("LANGSMITH_ENDPOINT", settings.langsmith_endpoint)
+    if settings.langsmith_api_key:
+        os.environ.setdefault("LANGSMITH_API_KEY", settings.langsmith_api_key)
+        os.environ.setdefault("LANGCHAIN_API_KEY", settings.langsmith_api_key)
+
+
+class OpenRouterLlmClient:
+    def __init__(self, *, base_url: str, model: str, api_key: str) -> None:
+        if not base_url.strip():
+            raise ValueError("base_url must not be empty.")
+        if not model.strip():
+            raise ValueError("model must not be empty.")
+        if not api_key.strip():
+            raise ValueError("api_key must not be empty.")
+        self._base_url = base_url
+        self._model = model
+        self._api_key = api_key
+
+    def generate(self, prompt: str) -> str:
+        payload = {
+            "model": self._model,
+            "messages": [
+                {"role": "system", "content": AI_ANALYSIS_SYSTEM_PROMPT},
+                {"role": "user", "content": prompt},
+            ],
+            "temperature": 0.1,
+            "response_format": {"type": "json_object"},
+        }
+        request = Request(
+            self._base_url,
+            data=json.dumps(payload).encode("utf-8"),
+            headers={
+                "Authorization": f"Bearer {self._api_key}",
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+            },
+            method="POST",
+        )
+
+        try:
+            with urlopen(request, timeout=AI_ANALYSIS_REQUEST_TIMEOUT_SECONDS) as response:  # noqa: S310
+                raw_body = response.read().decode("utf-8")
+        except (HTTPError, URLError, TimeoutError) as exc:
+            raise AiAnalysisProviderError("OpenRouter AI analysis is unavailable.") from exc
+
+        try:
+            body = json.loads(raw_body)
+        except json.JSONDecodeError:
+            return raw_body
+
+        choices = body.get("choices")
+        if isinstance(choices, list) and choices:
+            first_choice = choices[0]
+            if isinstance(first_choice, dict):
+                message = first_choice.get("message")
+                if isinstance(message, dict) and isinstance(message.get("content"), str):
+                    return message["content"]
+                if isinstance(first_choice.get("text"), str):
+                    return first_choice["text"]
+
+        for key in ("answer", "response", "content", "text"):
+            value = body.get(key)
+            if isinstance(value, str):
+                return value
 
         return raw_body

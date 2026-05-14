@@ -45,7 +45,7 @@ class DashboardService:
         self._repository = repository
 
     def get_overview(self, *, days: int = 30, limit: int = 50) -> DashboardOverview:
-        normalized_days = max(1, min(days, 365))
+        normalized_days = max(1, min(days, 3650))
         normalized_limit = max(1, min(limit, 200))
         start_at = datetime.combine(
             date.today() - timedelta(days=normalized_days - 1),

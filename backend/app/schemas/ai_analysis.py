@@ -100,3 +100,13 @@ class AiAnalysisHistoryResponse(BaseModel):
     limit: int = Field(..., ge=1)
     offset: int = Field(..., ge=0)
     analyses: list[AiAnalysisHistoryItem]
+
+
+class AiAnalysisObservabilityResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    tracing_enabled: bool
+    project: str
+    dashboard_url: str
+    traceable_provider: bool
+    provider_note: str

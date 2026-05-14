@@ -40,6 +40,11 @@ class FakeAiAnalysisRepository:
         ]
         return len(rows), rows[offset : offset + limit]
 
+    def delete_analysis_history_item(self, *, analysis_id: int) -> bool:
+        before_count = len(self.saved)
+        self.saved = [item for index, item in enumerate(self.saved, start=1) if index != analysis_id]
+        return len(self.saved) < before_count
+
 
 class FakeLlmClient:
     def __init__(self, answer: str) -> None:
@@ -155,3 +160,29 @@ def test_ai_analysis_service_parses_lm_studio_channel_markers() -> None:
     assert response.answer == "Use analyst review."
     assert response.insights == ["Context is limited."]
     assert response.recommended_actions == ["Inspect the transaction."]
+
+
+def test_ai_analysis_service_deletes_history_item() -> None:
+    repository = FakeAiAnalysisRepository([])
+    repository.saved.append(
+        {
+            "question": "What is risky?",
+            "answer": "Inspect transactions.",
+            "insights": [],
+            "recommended_actions": [],
+            "data_summary": {},
+            "model": "local-test",
+            "status": "completed",
+        }
+    )
+    service = AiAnalysisService(repository=repository, llm_client=FakeLlmClient("{}"), model="local-test", max_transactions=25)
+
+    assert service.delete_history_item(analysis_id=1) is True
+    assert repository.saved == []
+
+
+def test_ai_analysis_service_rejects_invalid_history_delete_id() -> None:
+    repository = FakeAiAnalysisRepository([])
+    service = AiAnalysisService(repository=repository, llm_client=FakeLlmClient("{}"), model="local-test", max_transactions=25)
+
+    assert service.delete_history_item(analysis_id=0) is False

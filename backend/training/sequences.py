@@ -12,6 +12,7 @@ from training.contracts import FeatureSpec
 class SequenceConfig:
     seq_len: int = 30
     stride: int = 1
+    max_windows: int | None = None
     split_col: str = "split"
 
 
@@ -37,6 +38,8 @@ def build_sequence_arrays(
         raise ValueError("seq_len must be positive.")
     if config.stride <= 0:
         raise ValueError("stride must be positive.")
+    if config.max_windows is not None and config.max_windows <= 0:
+        raise ValueError("max_windows must be positive when provided.")
 
     target_col = spec.target_column
     entity_col = spec.entity_id.columns[0]
@@ -57,13 +60,21 @@ def build_sequence_arrays(
     lengths: list[int] = []
     y_values: list[float] = []
 
+    grouped = split_df.groupby(entity_col, sort=False)
+    group_sizes = [int(size) for size in grouped.size().to_numpy()]
+    effective_stride = _resolve_effective_stride(
+        group_sizes,
+        requested_stride=config.stride,
+        max_windows=config.max_windows,
+    )
+
     for _, group in split_df.groupby(entity_col, sort=False):
         group = group.sort_values(time_col).reset_index(drop=True)
         n_rows = len(group)
         if n_rows == 0:
             continue
 
-        for end_idx in range(0, n_rows, config.stride):
+        for end_idx in range(0, n_rows, effective_stride):
             start_idx = max(0, end_idx - config.seq_len + 1)
             window = group.iloc[start_idx : end_idx + 1]
             length = len(window)
@@ -99,3 +110,25 @@ def build_sequence_arrays(
         y=np.asarray(y_values, dtype=np.float32),
     )
 
+
+def _resolve_effective_stride(
+    group_sizes: list[int],
+    *,
+    requested_stride: int,
+    max_windows: int | None,
+) -> int:
+    if max_windows is None:
+        return requested_stride
+
+    estimated_windows = sum(_count_windows(row_count, requested_stride) for row_count in group_sizes)
+    if estimated_windows <= max_windows:
+        return requested_stride
+
+    multiplier = int(np.ceil(estimated_windows / max_windows))
+    return requested_stride * max(multiplier, 1)
+
+
+def _count_windows(row_count: int, stride: int) -> int:
+    if row_count <= 0:
+        return 0
+    return int(np.ceil(row_count / stride))

@@ -57,3 +57,21 @@ def test_data_pipeline_preserves_sequence_grouping_columns(tmp_path) -> None:
     assert spec.time_column in frame.columns
     assert arrays.x_num.shape[0] > 0
     assert arrays.x_cat.shape[0] == arrays.x_num.shape[0]
+
+
+def test_sequence_arrays_respect_max_windows_per_split(tmp_path) -> None:
+    dataset_path = tmp_path / "fraudTrain.csv"
+    _raw_sequence_frame().to_csv(dataset_path, index=False)
+
+    frame, spec, artifacts = run_data_pipeline(dataset_path=dataset_path)
+    arrays = build_sequence_arrays(
+        frame,
+        spec=spec,
+        numeric_columns=artifacts.numeric_columns,
+        categorical_index_columns=artifacts.categorical_index_columns,
+        config=SequenceConfig(seq_len=5, stride=1, max_windows=3),
+        split_value="train",
+    )
+
+    assert arrays.x_num.shape[0] <= 3
+    assert arrays.x_cat.shape[0] == arrays.x_num.shape[0]

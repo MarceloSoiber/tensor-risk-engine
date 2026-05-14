@@ -256,7 +256,7 @@ class PostgresTransactionRepository:
                             model_version
                         FROM transactions
                         WHERE transaction_datetime >= %(start_at)s
-                        ORDER BY transaction_datetime DESC, id DESC
+                        ORDER BY created_at DESC, id DESC
                         LIMIT %(limit)s;
                         """,
                         {"start_at": start_at, "limit": limit},

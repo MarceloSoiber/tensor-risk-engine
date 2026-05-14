@@ -18,3 +18,6 @@ AGENTS.md
 tensor-risk-engine-roadmap.md
 # Added by code-review-graph
 .code-review-graph/
+
+# LangGraph API
+.langgraph_api

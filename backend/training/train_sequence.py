@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import copy
+import os
 from pathlib import Path
 
 import numpy as np
@@ -22,16 +23,17 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output-dir", default="artifacts/sequence", help="Directory for model artifacts.")
     parser.add_argument("--feature-spec", default=None, help="Optional path to feature_spec.json.")
     parser.add_argument("--backbone", default="gru", choices=["gru", "lstm"])
-    parser.add_argument("--seq-len", type=int, default=30)
-    parser.add_argument("--stride", type=int, default=1)
-    parser.add_argument("--batch-size", type=int, default=256)
-    parser.add_argument("--epochs", type=int, default=20)
+    parser.add_argument("--seq-len", type=int, default=20)
+    parser.add_argument("--stride", type=int, default=10)
+    parser.add_argument("--batch-size", type=int, default=128)
+    parser.add_argument("--epochs", type=int, default=5)
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--weight-decay", type=float, default=1e-4)
-    parser.add_argument("--hidden-size", type=int, default=128)
-    parser.add_argument("--num-layers", type=int, default=2)
+    parser.add_argument("--hidden-size", type=int, default=64)
+    parser.add_argument("--num-layers", type=int, default=1)
     parser.add_argument("--dropout", type=float, default=0.2)
-    parser.add_argument("--patience", type=int, default=5)
+    parser.add_argument("--patience", type=int, default=3)
+    parser.add_argument("--max-windows-per-split", type=int, default=50_000)
     parser.add_argument("--seed", type=int, default=42)
     return parser.parse_args()
 
@@ -41,6 +43,18 @@ def _set_seed(seed: int) -> None:
     torch.manual_seed(seed)
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
+
+
+def _configure_torch_threads() -> None:
+    raw_threads = os.getenv("TORCH_NUM_THREADS")
+    if raw_threads is None:
+        return
+    try:
+        thread_count = int(raw_threads)
+    except ValueError:
+        return
+    if thread_count > 0:
+        torch.set_num_threads(thread_count)
 
 
 def _compute_pos_weight(y: np.ndarray) -> float:
@@ -110,6 +124,7 @@ def _predict_scores(model: SequenceFraudModel, loader: DataLoader, device: torch
 def main() -> None:
     args = parse_args()
     _set_seed(args.seed)
+    _configure_torch_threads()
 
     output_dir = Path(args.output_dir)
     ensure_dir(output_dir)
@@ -119,7 +134,8 @@ def main() -> None:
     numeric_columns = preproc_artifacts.numeric_columns
     categorical_index_columns = preproc_artifacts.categorical_index_columns
 
-    seq_cfg = SequenceConfig(seq_len=args.seq_len, stride=args.stride)
+    _save_progress(output_dir, stage="Building sequence windows", epoch=0, total_epochs=args.epochs)
+    seq_cfg = SequenceConfig(seq_len=args.seq_len, stride=args.stride, max_windows=args.max_windows_per_split)
     train_arrays = build_sequence_arrays(
         frame,
         spec=spec,

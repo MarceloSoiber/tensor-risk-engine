@@ -91,6 +91,11 @@ class AiAnalysisService:
         total, rows = self._repository.list_analysis_history(limit=normalized_limit, offset=normalized_offset)
         return total, [_history_item_from_row(row) for row in rows]
 
+    def delete_history_item(self, *, analysis_id: int) -> bool:
+        if analysis_id < 1:
+            return False
+        return self._repository.delete_analysis_history_item(analysis_id=analysis_id)
+
 
 def _build_prompt(
     *,

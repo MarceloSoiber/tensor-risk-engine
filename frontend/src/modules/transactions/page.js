@@ -1,5 +1,9 @@
 import { createButton } from "../../components/ui/button.js";
-import { analyzeTransaction } from "../../services/transactionService.js";
+import {
+  analyzeTransaction,
+  fetchTransactionImportJob,
+  startFraudTestImport,
+} from "../../services/transactionService.js";
 import { listTrainingJobs } from "../../services/trainingService.js";
 import { createElement, formatJson } from "../../utils/dom.js";
 
@@ -270,6 +274,8 @@ function createTransactionFormPanel({ onAnalyzed }) {
     className: "api-result transaction-status",
     text: "Ready",
   });
+  const importTrainingSelect = createTrainingSelect({ label: "Import validation model" });
+  const importControl = createFraudTestImportControl({ trainingSelect: importTrainingSelect, status });
   const submitButton = createButton({
     label: "Analyze transaction",
     onClick: async () => {
@@ -309,6 +315,7 @@ function createTransactionFormPanel({ onAnalyzed }) {
   });
 
   form.append(
+    importControl,
     scenarioButtons,
     createElement("div", {
       className: "transaction-form__grid",
@@ -322,7 +329,90 @@ function createTransactionFormPanel({ onAnalyzed }) {
   );
   panel.append(form);
   hydrateTrainingSelect(trainingSelect, status);
+  hydrateTrainingSelect(importTrainingSelect, status);
   return panel;
+}
+
+function createFraudTestImportControl({ trainingSelect, status }) {
+  const wrapper = createElement("div", { className: "transaction-import-control" });
+  const progress = createElement("span", {
+    className: "transaction-import-control__status",
+    text: "fraudTest.csv",
+  });
+  const button = createButton({
+    label: "Import and analyze fraudTest.csv",
+    variant: "secondary",
+    onClick: async () => {
+      await startFraudTestImportJob({ trainingSelect, status, button, progress, wrapper });
+    },
+  });
+
+  wrapper.append(trainingSelect.wrapper, button, progress);
+  return wrapper;
+}
+
+async function startFraudTestImportJob({ trainingSelect, status, button, progress, wrapper }) {
+  button.disabled = true;
+  status.textContent = "Starting fraudTest.csv import...";
+
+  try {
+    const job = await startFraudTestImport({
+      batch_size: 1000,
+      training_job_id: trainingSelect?.getValue() || null,
+    });
+    renderImportJobProgress(progress, job);
+    status.textContent = formatJson({
+      message: "fraudTest.csv import started.",
+      job_id: job.job_id,
+      status: job.status,
+      dataset_path: job.dataset_path,
+    });
+    pollFraudTestImportJob({ jobId: job.job_id, status, button, progress, wrapper });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unexpected import error.";
+    status.textContent = `Unable to start fraudTest.csv import: ${message}`;
+    progress.textContent = "Import not started";
+    button.disabled = false;
+  }
+}
+
+function pollFraudTestImportJob({ jobId, status, button, progress, wrapper }) {
+  const intervalId = window.setInterval(async () => {
+    if (!wrapper.isConnected) {
+      window.clearInterval(intervalId);
+      return;
+    }
+
+    try {
+      const job = await fetchTransactionImportJob(jobId);
+      renderImportJobProgress(progress, job);
+      status.textContent = formatJson({
+        message: "fraudTest.csv import status.",
+        job_id: job.job_id,
+        status: job.status,
+        processed_rows: job.processed_rows,
+        imported_rows: job.imported_rows,
+        analyzed_rows: job.analyzed_rows,
+        error: job.error,
+      });
+
+      if (["succeeded", "failed"].includes(job.status)) {
+        window.clearInterval(intervalId);
+        button.disabled = false;
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unexpected import status error.";
+      status.textContent = `Unable to load import job status: ${message}`;
+      window.clearInterval(intervalId);
+      button.disabled = false;
+    }
+  }, 2500);
+}
+
+function renderImportJobProgress(progress, job) {
+  const rows = Number(job.analyzed_rows || job.imported_rows || job.processed_rows || 0);
+  const formattedRows = new Intl.NumberFormat("en-US").format(rows);
+  progress.textContent = `${job.status} · ${formattedRows} analyzed`;
 }
 
 function createAnalysisPanel() {
@@ -355,7 +445,7 @@ function createAnalysisPanel() {
       }),
       createElement("p", {
         className: "panel__description",
-        text: `Reason: ${response.reasons.join(", ")} · Model: ${response.model_version}`,
+        text: `Reason: ${response.reasons.join(", ")}`,
       }),
     );
     renderHistory(historyList, analyses);
@@ -363,6 +453,19 @@ function createAnalysisPanel() {
 
   renderHistory(historyList, analyses);
   return { element: panel, renderResult };
+}
+
+function formatModelVersion(value) {
+  if (typeof value !== "string" || !value.trim()) {
+    return "Unknown";
+  }
+
+  const [modelType, modelId] = value.split(":");
+  if (!modelId) {
+    return value;
+  }
+
+  return `${formatModelType(modelType)} · ${modelId.slice(0, 8)}`;
 }
 
 function createTransactionInput(field) {
@@ -438,7 +541,7 @@ async function submitTransaction({ fields, trainingSelect, status, submitButton,
   }
 }
 
-function createTrainingSelect() {
+function createTrainingSelect({ label = "Training model" } = {}) {
   const wrapper = createElement("div", { className: "transaction-input dataset-picker" });
   const button = createElement("button", {
     className: "dataset-picker__button",
@@ -469,7 +572,7 @@ function createTrainingSelect() {
   });
 
   wrapper.append(
-    createElement("span", { className: "training-field__label", text: "Training model" }),
+    createElement("span", { className: "training-field__label", text: label }),
     button,
     list,
   );
@@ -478,11 +581,10 @@ function createTrainingSelect() {
     wrapper,
     setEntries: (nextEntries) => {
       entries = nextEntries;
-      selectedJobId = "";
-      button.disabled = false;
+      selectedJobId = entries[0]?.jobId ?? "";
+      button.disabled = entries.length === 0;
       setOpen(false);
       renderOptions();
-      button.textContent = "Latest baseline (automatic)";
       onChange();
     },
     setDisabledWithMessage: (message) => {
@@ -500,22 +602,6 @@ function createTrainingSelect() {
   };
 
   function renderOptions() {
-    const automaticOption = createElement("button", {
-      className: `dataset-picker__option${selectedJobId === "" ? " is-selected" : ""}`,
-      attrs: { type: "button", role: "option", "aria-selected": selectedJobId === "" ? "true" : "false" },
-    });
-    automaticOption.append(
-      createElement("span", { text: "Latest baseline (automatic)" }),
-      createElement("small", { text: "Newest succeeded baseline model" }),
-    );
-    automaticOption.addEventListener("click", () => {
-      selectedJobId = "";
-      button.textContent = "Latest baseline (automatic)";
-      renderOptions();
-      onChange();
-      setOpen(false);
-    });
-
     const modelOptions = entries.map((entry) => {
       const option = createElement("button", {
         className: `dataset-picker__option${selectedJobId === entry.jobId ? " is-selected" : ""}`,
@@ -539,7 +625,7 @@ function createTrainingSelect() {
       return option;
     });
 
-    list.replaceChildren(automaticOption, ...modelOptions);
+    list.replaceChildren(...modelOptions);
   }
 
   function setOpen(isOpen) {
@@ -552,7 +638,9 @@ function createTrainingSelect() {
     const selected = entries.find((entry) => entry.jobId === selectedJobId) ?? null;
     if (selected) {
       button.textContent = selected.label;
+      return;
     }
+    button.textContent = entries.length ? "Select training model" : "No trained models available";
   }
 }
 
@@ -560,15 +648,15 @@ async function hydrateTrainingSelect(trainingSelect, status) {
   try {
     const payload = await listTrainingJobs();
     const jobs = (payload?.jobs ?? [])
-      .filter((job) => job.model_type === "baseline" && job.status === "succeeded")
+      .filter((job) => ["baseline", "sequence"].includes(job.model_type) && job.status === "succeeded")
       .map((job) => ({
         jobId: job.job_id,
-        label: `${job.run_name || job.job_id} · ${job.job_id.slice(0, 8)}`,
-        meta: `Updated ${formatDateTime(job.updated_at)}`,
+        label: `${job.run_name || `${formatModelType(job.model_type)} model`} · ${job.job_id.slice(0, 8)}`,
+        meta: `${formatModelType(job.model_type)} · updated ${formatDateTime(job.updated_at)}`,
       }));
 
     if (!jobs.length) {
-      trainingSelect.setDisabledWithMessage("No succeeded baseline training found");
+      trainingSelect.setDisabledWithMessage("No succeeded training found");
       return;
     }
 
@@ -578,6 +666,10 @@ async function hydrateTrainingSelect(trainingSelect, status) {
     trainingSelect.setDisabledWithMessage("Unable to load trained models");
     status.textContent = `Unable to load training models: ${message}`;
   }
+}
+
+function formatModelType(value) {
+  return value === "sequence" ? "Sequence" : "Baseline";
 }
 
 function formatDateTime(value) {
@@ -639,6 +731,7 @@ function renderHistory(container, analyses) {
         createElement("span", {
           text: `${formatCurrency(request.amount)} · ${response.decision} · ${formatHistoryDate(request.transaction_datetime)}`,
         }),
+        createElement("small", { text: `Model used: ${formatModelVersion(response.model_version)}` }),
         createElement("small", { text: `Analyzed ${createdAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` }),
       ],
     }),

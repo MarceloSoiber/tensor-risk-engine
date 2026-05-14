@@ -13,7 +13,7 @@ dashboard_service = DashboardService(repository=PostgresTransactionRepository(se
 
 @router.get("/overview", response_model=DashboardOverviewResponse)
 def get_dashboard_overview(
-    days: int = Query(default=30, ge=1, le=365),
+    days: int = Query(default=3650, ge=1, le=3650),
     limit: int = Query(default=50, ge=1, le=200),
 ) -> DashboardOverviewResponse:
     try:

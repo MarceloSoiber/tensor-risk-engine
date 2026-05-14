@@ -172,6 +172,7 @@ def test_training_job_integration_completes_process(
     assert body["log_path"].startswith(str(service._artifacts_root))
     assert "--epochs" in body["command"]
     assert "1" in body["command"]
+    assert "--max-windows-per-split" in body["command"]
     assert service._registry_path.exists()
 
 

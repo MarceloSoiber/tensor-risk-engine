@@ -3,9 +3,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Iterable
+from typing import Callable, Iterable
 
 import pandas as pd
+
+from app.domain.transaction import Transaction
+from app.services.risk_service import RiskService
 
 
 REQUIRED_KAGGLE_COLUMNS = {
@@ -39,6 +42,7 @@ REQUIRED_KAGGLE_COLUMNS = {
 class ImportResult:
     processed_rows: int
     imported_rows: int
+    analyzed_rows: int = 0
 
 
 class TransactionImportError(RuntimeError):
@@ -83,6 +87,82 @@ class TransactionImportService:
 
         return ImportResult(processed_rows=processed_rows, imported_rows=imported_rows)
 
+    def import_and_analyze_csv(
+        self,
+        *,
+        dataset_path: Path,
+        batch_size: int,
+        risk_service: RiskService,
+        training_job_id: str | None = None,
+        progress_callback: Callable[[ImportResult], None] | None = None,
+    ) -> ImportResult:
+        if batch_size <= 0:
+            raise ValueError("batch_size must be greater than zero.")
+        if not dataset_path.exists():
+            raise FileNotFoundError(f"Dataset not found: {dataset_path}")
+
+        try:
+            import psycopg
+        except ImportError as exc:
+            raise TransactionImportError("Postgres driver is not installed.") from exc
+
+        processed_rows = 0
+        imported_rows = 0
+        analyzed_rows = 0
+
+        try:
+            for frame in pd.read_csv(dataset_path, chunksize=batch_size):
+                self._validate_columns(frame.columns)
+                rows: list[dict[str, object]] = []
+                for row in frame.to_dict(orient="records"):
+                    mapped_row = _map_kaggle_row(row)
+                    transaction = _transaction_from_import_row(mapped_row)
+                    risk_score, decision, model_version = risk_service.analyze(
+                        transaction,
+                        training_job_id=training_job_id,
+                    )
+                    mapped_row.update(
+                        {
+                            "transactions_last_hour": transaction.transactions_last_hour,
+                            "transactions_last_24h": transaction.transactions_last_24h,
+                            "average_amount_24h": transaction.average_amount_24h,
+                            "risk_score": risk_score.value,
+                            "decision": decision.outcome.value,
+                            "reasons": decision.reasons,
+                            "model_version": model_version,
+                        }
+                    )
+                    rows.append(mapped_row)
+
+                processed_rows += len(rows)
+                if not rows:
+                    continue
+
+                with psycopg.connect(self._database_url) as connection:
+                    with connection.cursor() as cursor:
+                        cursor.executemany(_ANALYZED_UPSERT_SQL, rows)
+                    imported_rows += len(rows)
+                    analyzed_rows += len(rows)
+
+                if progress_callback is not None:
+                    progress_callback(
+                        ImportResult(
+                            processed_rows=processed_rows,
+                            imported_rows=imported_rows,
+                            analyzed_rows=analyzed_rows,
+                        )
+                    )
+        except pd.errors.ParserError as exc:
+            raise TransactionImportError("Dataset could not be parsed as CSV.") from exc
+        except psycopg.Error as exc:
+            raise TransactionImportError("Failed to import analyzed transactions.") from exc
+
+        return ImportResult(
+            processed_rows=processed_rows,
+            imported_rows=imported_rows,
+            analyzed_rows=analyzed_rows,
+        )
+
     @staticmethod
     def _validate_columns(columns: Iterable[str]) -> None:
         missing = sorted(REQUIRED_KAGGLE_COLUMNS.difference(set(columns)))
@@ -116,6 +196,27 @@ def _map_kaggle_row(row: dict[str, object]) -> dict[str, object]:
         "merchant_longitude": float(row["merch_long"]),
         "is_fraud": bool(int(row["is_fraud"])),
     }
+
+
+def _transaction_from_import_row(row: dict[str, object]) -> Transaction:
+    amount = float(row["amount"])
+    return Transaction(
+        amount=amount,
+        transaction_datetime=row["transaction_datetime"],
+        merchant=str(row["merchant"]),
+        category=str(row["category"]),
+        gender=str(row["gender"] or "F"),
+        state=str(row["state"] or "NA"),
+        job=str(row["job"] or "Unknown"),
+        city_population=int(row["city_population"] or 0),
+        customer_latitude=float(row["customer_latitude"]),
+        customer_longitude=float(row["customer_longitude"]),
+        merchant_latitude=float(row["merchant_latitude"]),
+        merchant_longitude=float(row["merchant_longitude"]),
+        transactions_last_hour=0,
+        transactions_last_24h=1,
+        average_amount_24h=amount,
+    )
 
 
 def _optional_text(value: object) -> str | None:
@@ -205,5 +306,104 @@ ON CONFLICT (transaction_number) WHERE transaction_number IS NOT NULL DO UPDATE 
     merchant_latitude = EXCLUDED.merchant_latitude,
     merchant_longitude = EXCLUDED.merchant_longitude,
     is_fraud = EXCLUDED.is_fraud,
+    updated_at = NOW();
+"""
+
+
+_ANALYZED_UPSERT_SQL = """
+INSERT INTO transactions (
+    source_row_number,
+    transaction_datetime,
+    card_number,
+    merchant,
+    category,
+    amount,
+    first_name,
+    last_name,
+    gender,
+    street,
+    city,
+    state,
+    postal_code,
+    customer_latitude,
+    customer_longitude,
+    city_population,
+    job,
+    date_of_birth,
+    transaction_number,
+    unix_time,
+    merchant_latitude,
+    merchant_longitude,
+    is_fraud,
+    transactions_last_hour,
+    transactions_last_24h,
+    average_amount_24h,
+    risk_score,
+    decision,
+    reasons,
+    model_version
+)
+VALUES (
+    %(source_row_number)s,
+    %(transaction_datetime)s,
+    %(card_number)s,
+    %(merchant)s,
+    %(category)s,
+    %(amount)s,
+    %(first_name)s,
+    %(last_name)s,
+    %(gender)s,
+    %(street)s,
+    %(city)s,
+    %(state)s,
+    %(postal_code)s,
+    %(customer_latitude)s,
+    %(customer_longitude)s,
+    %(city_population)s,
+    %(job)s,
+    %(date_of_birth)s,
+    %(transaction_number)s,
+    %(unix_time)s,
+    %(merchant_latitude)s,
+    %(merchant_longitude)s,
+    %(is_fraud)s,
+    %(transactions_last_hour)s,
+    %(transactions_last_24h)s,
+    %(average_amount_24h)s,
+    %(risk_score)s,
+    %(decision)s,
+    %(reasons)s::text[],
+    %(model_version)s
+)
+ON CONFLICT (transaction_number) WHERE transaction_number IS NOT NULL DO UPDATE SET
+    source_row_number = EXCLUDED.source_row_number,
+    transaction_datetime = EXCLUDED.transaction_datetime,
+    card_number = EXCLUDED.card_number,
+    merchant = EXCLUDED.merchant,
+    category = EXCLUDED.category,
+    amount = EXCLUDED.amount,
+    first_name = EXCLUDED.first_name,
+    last_name = EXCLUDED.last_name,
+    gender = EXCLUDED.gender,
+    street = EXCLUDED.street,
+    city = EXCLUDED.city,
+    state = EXCLUDED.state,
+    postal_code = EXCLUDED.postal_code,
+    customer_latitude = EXCLUDED.customer_latitude,
+    customer_longitude = EXCLUDED.customer_longitude,
+    city_population = EXCLUDED.city_population,
+    job = EXCLUDED.job,
+    date_of_birth = EXCLUDED.date_of_birth,
+    unix_time = EXCLUDED.unix_time,
+    merchant_latitude = EXCLUDED.merchant_latitude,
+    merchant_longitude = EXCLUDED.merchant_longitude,
+    is_fraud = EXCLUDED.is_fraud,
+    transactions_last_hour = EXCLUDED.transactions_last_hour,
+    transactions_last_24h = EXCLUDED.transactions_last_24h,
+    average_amount_24h = EXCLUDED.average_amount_24h,
+    risk_score = EXCLUDED.risk_score,
+    decision = EXCLUDED.decision,
+    reasons = EXCLUDED.reasons,
+    model_version = EXCLUDED.model_version,
     updated_at = NOW();
 """

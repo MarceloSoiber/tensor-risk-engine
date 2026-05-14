@@ -86,6 +86,54 @@ Available scripts:
   - `GET /api/v1/training/jobs/{job_id}`
   - `POST /api/v1/training/jobs/{job_id}/cancel`
 
+## AI Analysis LLM Provider
+
+AI analysis uses the local LLM configuration by default:
+
+- `LOCAL_LLM_BASE_URL`
+- `LOCAL_LLM_MODEL`
+- `LOCAL_LLM_API_KEY`
+
+To route AI analysis through OpenRouter, set both values below. If either one is missing or empty, the backend falls back to the local LLM.
+
+- `OPENROUTER_API_KEY`
+- `OPENROUTER_MODEL`
+
+`OPENROUTER_BASE_URL` defaults to `https://openrouter.ai/api/v1/chat/completions`.
+
+### LangSmith / LangChain tracing
+
+To inspect LangChain executions in the LangSmith dashboard while keeping the frontend AI Analysis flow, configure:
+
+- `LANGSMITH_TRACING=true`
+- `LANGSMITH_API_KEY`
+- `LANGSMITH_PROJECT`
+- `LANGSMITH_ENDPOINT`
+
+The AI Analysis screen shows the tracing status and an **Open LangSmith** link. Traces are emitted for LangChain `ChatOpenAI` compatible providers. If `LOCAL_LLM_BASE_URL` ends with `/api/v1/chat`, the app preserves the current LM Studio direct API flow used by the frontend, but that direct HTTP path is not traced by LangSmith. To trace local LM Studio calls, use an OpenAI-compatible base URL such as `http://host.docker.internal:1234/v1` when available.
+
+## LangGraph Studio
+
+The project includes a LangGraph configuration at `langgraph.json` with a `fraud_analysis` graph that reuses the backend AI Analysis service.
+
+Run it with:
+
+```bash
+npm run langgraph:serve
+```
+
+The npm script pins the LangGraph CLI runtime to `python3.12` through `UV_PYTHON`, avoiding Python 3.13 compatibility issues in the local development server. It also rewrites the LangGraph process database URL to `localhost`, because the Docker-only hostname `postgres` is not resolvable from the host. For local LM Studio, set `LANGGRAPH_LOCAL_LLM_BASE_URL` when the host process needs a different URL than the backend container; WSL usually works with `http://host.docker.internal:1234/v1`. The server defaults to `http://localhost:2024`. The graph input accepts:
+
+```json
+{
+  "question": "Which imported transactions deserve analyst attention?",
+  "filters": {
+    "source": "analyzed",
+    "limit": 25
+  }
+}
+```
+
 ## Notes
 
 - The frontend proxies `/api/*` requests to the backend container through Nginx.

@@ -34,6 +34,9 @@ class AiAnalysisRepository(Protocol):
     def list_analysis_history(self, *, limit: int, offset: int) -> tuple[int, list[dict[str, object]]]:
         ...
 
+    def delete_analysis_history_item(self, *, analysis_id: int) -> bool:
+        ...
+
 
 class PostgresAiAnalysisRepository:
     def __init__(self, database_url: str) -> None:
@@ -170,6 +173,23 @@ class PostgresAiAnalysisRepository:
             raise AiAnalysisPersistenceError("Failed to list AI analysis history.") from exc
 
         return total, rows
+
+    def delete_analysis_history_item(self, *, analysis_id: int) -> bool:
+        try:
+            import psycopg
+        except ImportError as exc:
+            raise AiAnalysisPersistenceError("Postgres driver is not installed.") from exc
+
+        try:
+            with psycopg.connect(self._database_url) as connection:
+                with connection.cursor() as cursor:
+                    cursor.execute(
+                        "DELETE FROM ai_analysis_history WHERE id = %(analysis_id)s;",
+                        {"analysis_id": analysis_id},
+                    )
+                    return cursor.rowcount > 0
+        except psycopg.Error as exc:
+            raise AiAnalysisPersistenceError("Failed to delete AI analysis history item.") from exc
 
 
 def _first_row(row: dict[str, Any] | None) -> dict[str, Any]:

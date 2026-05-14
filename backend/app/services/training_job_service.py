@@ -218,6 +218,7 @@ class TrainingJobService:
                 process = self._process_factory(
                     command,
                     cwd=str(self._backend_root),
+                    env=self._build_process_env(),
                     stdout=log_file,
                     stderr=log_file,
                 )
@@ -400,6 +401,7 @@ class TrainingJobService:
                 "hidden_size": ("--hidden-size", int),
                 "num_layers": ("--num-layers", int),
                 "dropout": ("--dropout", float),
+                "max_windows_per_split": ("--max-windows-per-split", int),
             }
             for key, (flag, caster) in seq_map.items():
                 if key in sequence_config:
@@ -441,12 +443,9 @@ class TrainingJobService:
 
         process = self._processes.get(record.job_id)
         if process is None:
-            if record.pid is not None and self._pid_is_running(record.pid):
-                self._refresh_progress_locked(record)
-                return
             self._refresh_progress_locked(record)
             record.status = "failed"
-            record.error = record.error or "Training process was not found."
+            record.error = record.error or "Training process is no longer managed by the API."
             record.finished_at = record.finished_at or _utc_now()
             record.updated_at = _utc_now()
             self._close_log_locked(record.job_id)
@@ -547,14 +546,12 @@ class TrainingJobService:
         self._jobs = loaded
 
     @staticmethod
-    def _pid_is_running(pid: int) -> bool:
-        try:
-            os.kill(pid, 0)
-        except ProcessLookupError:
-            return False
-        except PermissionError:
-            return True
-        return True
+    def _build_process_env() -> dict[str, str]:
+        env = os.environ.copy()
+        for key in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS", "NUMEXPR_NUM_THREADS"):
+            env.setdefault(key, "1")
+        env.setdefault("TORCH_NUM_THREADS", "1")
+        return env
 
     @staticmethod
     def _optional_int(value: Any) -> int | None:
