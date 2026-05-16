@@ -4,6 +4,8 @@ Credit Card Fraud Detection is a behavioral fraud detection platform that combin
 
 The system models user transaction history as a temporal pattern and uses that context to estimate risk, surface decisions, and support model training workflows.
 
+<img width="1904" height="1057" alt="image" src="https://github.com/user-attachments/assets/e90b0f1c-23fb-4604-b967-2cc807e3b98f" />
+
 ## Stack
 
 - Backend: FastAPI on Python 3.14 in Docker
@@ -473,6 +475,8 @@ The AI Analysis screen shows the tracing status and an **Open LangSmith** link. 
 ## LangGraph Studio
 
 The project includes a LangGraph configuration at `langgraph.json` with a `fraud_analysis` graph that reuses the backend AI Analysis service.
+
+<img width="1658" height="891" alt="Screenshot 2026-05-14 164235" src="https://github.com/user-attachments/assets/01cfb858-de4e-43a6-9bec-d2a9b665e605" />
 
 Run it with:
 
