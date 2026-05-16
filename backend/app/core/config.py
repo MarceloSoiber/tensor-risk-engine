@@ -107,7 +107,7 @@ settings = Settings(
     openrouter_base_url=os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1/chat/completions"),
     openrouter_model=_optional_env("OPENROUTER_MODEL"),
     openrouter_api_key=_optional_env("OPENROUTER_API_KEY"),
-    ai_analysis_max_transactions=_parse_int_env("AI_ANALYSIS_MAX_TRANSACTIONS", 25, minimum=1, maximum=200),
+    ai_analysis_max_transactions=_parse_int_env("AI_ANALYSIS_MAX_TRANSACTIONS", 200, minimum=1, maximum=200),
     langsmith_tracing=_parse_bool_env("LANGSMITH_TRACING") or _parse_bool_env("LANGCHAIN_TRACING_V2"),
     langsmith_api_key=_optional_env("LANGSMITH_API_KEY") or _optional_env("LANGCHAIN_API_KEY"),
     langsmith_project=os.getenv("LANGSMITH_PROJECT") or os.getenv("LANGCHAIN_PROJECT") or "credit-card-fraud-detection",
