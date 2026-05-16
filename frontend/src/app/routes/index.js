@@ -1,16 +1,16 @@
 import { createAuthPage } from "../../modules/auth/page.js";
 import { createDashboardPage } from "../../modules/dashboard/page.js";
-import { createFraudPage } from "../../modules/fraud/page.js";
+import { createFraudPage } from "../../modules/ia analysis/page.js";
 import { createModelMonitoringPage } from "../../modules/model-monitoring/page.js";
 import { createTransactionsPage } from "../../modules/transactions/page.js";
 
 const ROUTE_DEFINITIONS = [
   { hash: "#/dashboard", label: "Dashboard", render: createDashboardPage },
-  { hash: "#/auth", label: "Auth", render: createAuthPage, sidebar: false },
+  { hash: "#/model-training", label: "Model Training", render: createModelMonitoringPage },
   { hash: "#/transactions", label: "Transactions", render: createTransactionsPage },
-  { hash: "#/ai-analysis", label: "AI Analysis", render: createFraudPage },
-  { hash: "#/fraud", label: "AI Analysis", render: createFraudPage, sidebar: false },
-  { hash: "#/model-training", label: "Model training", render: createModelMonitoringPage },
+  { hash: "#/ai-analysis", label: "IA Analysis", render: createFraudPage },
+  { hash: "#/auth", label: "Auth", render: createAuthPage, sidebar: false },
+  { hash: "#/fraud", label: "IA Analysis", render: createFraudPage, sidebar: false },
 ];
 
 export function createRoutes(context) {

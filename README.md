@@ -126,6 +126,7 @@ LOCAL_LLM_BASE_URL=http://host.docker.internal:1234/v1
 LOCAL_LLM_MODEL=openai/gpt-oss-20b
 LOCAL_LLM_API_KEY=lm-studio
 LANGGRAPH_LOCAL_LLM_BASE_URL=http://host.docker.internal:1234/v1
+AI_ANALYSIS_MAX_TRANSACTIONS=200
 ```
 
 Use `DATABASE_URL` with host `postgres` for Docker containers. The LangGraph helper rewrites database access to `localhost` because LangGraph runs on the host.
@@ -423,6 +424,9 @@ AI analysis uses the local LLM configuration by default:
 - `LOCAL_LLM_BASE_URL`
 - `LOCAL_LLM_MODEL`
 - `LOCAL_LLM_API_KEY`
+- `AI_ANALYSIS_MAX_TRANSACTIONS`
+
+`AI_ANALYSIS_MAX_TRANSACTIONS` is the backend safety cap for the number of transactions sent to the model. It defaults to `200`, which matches the maximum accepted by the AI Analysis request schema and the frontend transaction limit control.
 
 To route AI analysis through OpenRouter, set both values below. If either one is missing or empty, the backend falls back to the local LLM.
 
@@ -483,7 +487,7 @@ The npm script pins the LangGraph CLI runtime to `python3.12` through `UV_PYTHON
   "question": "Which imported transactions deserve analyst attention?",
   "filters": {
     "source": "analyzed",
-    "limit": 25
+    "limit": 50
   }
 }
 ```
