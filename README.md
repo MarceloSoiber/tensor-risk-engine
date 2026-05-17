@@ -2,9 +2,9 @@
 
 Credit Card Fraud Detection is a behavioral fraud detection platform that combines sequence modeling, feature engineering, and explainable AI to identify anomalous financial transactions.
 
-The system models user transaction history as a temporal pattern and uses that context to estimate risk, surface decisions, and support model training workflows.
-
 <img width="1904" height="1057" alt="image" src="https://github.com/user-attachments/assets/e90b0f1c-23fb-4604-b967-2cc807e3b98f" />
+
+The system models user transaction history as a temporal pattern and uses that context to estimate risk, surface decisions, and support model training workflows.
 
 https://github.com/user-attachments/assets/4e86fd05-c0a5-4233-96ce-ea45075c08af
 
